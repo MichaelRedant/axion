@@ -1,0 +1,71 @@
+{
+  "hero": {
+    "title": "AXION",
+    "tagline": "Compute Beyond Logic.",
+    "subtitle": "Retro-futuristische algebrarekenmachine voor exacte wiskunde."
+  },
+  "input": {
+    "label": "Invoer",
+    "placeholder": "Voer een expressie in, bijvoorbeeld sin(pi/2) + sqrt(2)^2",
+    "evaluate": "Bereken",
+    "clear": "Leeg veld"
+  },
+  "result": {
+    "title": "Laatst resultaat",
+    "exact": "Exact",
+    "approx": "Numeriek (n=8)",
+    "empty": "Nog geen resultaat.",
+    "errorPrefix": "Fout"
+  },
+  "history": {
+    "title": "Historiek",
+    "empty": "Historiek is nog leeg. Evaluaties verschijnen hier met tijdstempel.",
+    "restore": "Herstel",
+    "copy": "Kopieer",
+    "pin": "Pin",
+    "unpin": "Ontpin",
+    "pinnedLabel": "Gepind"
+  },
+  "keypad": {
+    "title": "Wetenschappelijk paneel"
+  },
+  "help": {
+    "button": "Help & sneltoetsen",
+    "title": "Axion hulp",
+    "subtitle": "Sneltoetsen en voorbeelden",
+    "close": "Sluit",
+    "docs": "Syntax",
+    "shortcuts": "Sneltoetsen",
+    "examples": "Voorbeelden",
+    "disclaimer": "Axion ondersteunt radianen en basisalgebra in dit MVP.",
+    "language": "Taal",
+    "shortcutDescriptions": {
+      "evaluate": "Bereken expressie",
+      "newline": "Nieuwe regel",
+      "historyPrev": "Vorige historiekitem",
+      "historyNext": "Volgende historiekitem",
+      "clear": "Leeg veld",
+      "help": "Toon hulp",
+      "toggleTheme": "Schakel neon thema"
+    }
+  },
+  "theme": {
+    "enable": "Neon actief",
+    "disable": "Neon uit"
+  },
+  "clipboard": {
+    "success": "Gekopieerd naar klembord"
+  },
+  "errors": {
+    "empty": "Voer een expressie in om te berekenen.",
+    "unknown": "Onverwachte fout"
+  },
+  "examples": [
+    "expand((x+1)^3)",
+    "factor(x^2-1)",
+    "subs(x=2)",
+    "sqrt(2)^2",
+    "sin(pi/2)",
+    "log(100,10)"
+  ]
+}

@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ax-bg: #0d0d0d;
+  --ax-grid: rgba(0, 255, 242, 0.08);
+  --ax-neon: #00fff2;
+  --ax-violet: #7b2cbf;
+  --ax-amber: #ffb800;
+  --ax-text: #f5f7fa;
+  --ax-muted: rgba(255, 255, 255, 0.7);
+}
+
+:root[data-theme="dark"] {
+  --ax-neon: #4defff;
+  --ax-grid: rgba(0, 255, 242, 0.04);
+  --ax-text: #e6f1ff;
+  --ax-muted: rgba(255, 255, 255, 0.62);
+}
+
+:root[data-theme="neon"] {
+  --ax-neon: #00fff2;
+  --ax-grid: rgba(0, 255, 242, 0.08);
+  --ax-text: #f5f7fa;
+  --ax-muted: rgba(255, 255, 255, 0.7);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  @apply min-h-screen bg-canvas text-[var(--ax-text)];
+  font-family: var(--font-plex), ui-monospace, SFMono-Regular, Menlo, Monaco,
+    Consolas, "Liberation Mono", "Courier New", monospace;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(123, 44, 191, 0.12), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(0, 255, 242, 0.15), transparent 50%),
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0),
+      rgba(0, 0, 0, 0) 18px,
+      rgba(255, 255, 255, 0.03) 19px,
+      rgba(255, 255, 255, 0.03) 20px
+    ),
+    radial-gradient(circle at center, rgba(6, 11, 20, 0.95), #030712);
+  background-attachment: fixed;
+}
+
+.axion-grid {
+  position: relative;
+  isolation: isolate;
+}
+
+.axion-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+        0deg,
+        transparent 0,
+        transparent 90%,
+        var(--ax-grid) 90%,
+        var(--ax-grid) 100%
+      )
+      0 0 / 100% 24px,
+    linear-gradient(
+        90deg,
+        transparent 0,
+        transparent 90%,
+        var(--ax-grid) 90%,
+        var(--ax-grid) 100%
+      )
+      0 0 / 24px 100%;
+  mix-blend-mode: screen;
+  z-index: -1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

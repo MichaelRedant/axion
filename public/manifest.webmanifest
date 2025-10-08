@@ -1,0 +1,26 @@
+﻿{
+  "name": "Axion",
+  "short_name": "Axion",
+  "description": "Retro-futuristische algebra calculator voor exacte en numerieke wiskunde.",
+  "start_url": "/axion",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0D0D0D",
+  "theme_color": "#0D0D0D",
+  "lang": "nl",
+  "icons": [
+    {
+      "src": "/icons/axion.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/icons/axion.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

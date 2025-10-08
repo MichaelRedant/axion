@@ -1,0 +1,71 @@
+{
+  "hero": {
+    "title": "AXION",
+    "tagline": "Compute Beyond Logic.",
+    "subtitle": "Retro-futuristic algebra calculator for exact mathematics."
+  },
+  "input": {
+    "label": "Input",
+    "placeholder": "Enter an expression such as sin(pi/2) + sqrt(2)^2",
+    "evaluate": "Evaluate",
+    "clear": "Clear field"
+  },
+  "result": {
+    "title": "Latest result",
+    "exact": "Exact",
+    "approx": "Numeric (n=8)",
+    "empty": "No result yet.",
+    "errorPrefix": "Error"
+  },
+  "history": {
+    "title": "History",
+    "empty": "History is empty. Evaluations will appear here with timestamps.",
+    "restore": "Restore",
+    "copy": "Copy",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "pinnedLabel": "Pinned"
+  },
+  "keypad": {
+    "title": "Scientific panel"
+  },
+  "help": {
+    "button": "Help & shortcuts",
+    "title": "Axion help",
+    "subtitle": "Shortcuts and examples",
+    "close": "Close",
+    "docs": "Syntax",
+    "shortcuts": "Shortcuts",
+    "examples": "Examples",
+    "disclaimer": "Axion currently supports radians and basic algebra in this MVP.",
+    "language": "Language",
+    "shortcutDescriptions": {
+      "evaluate": "Evaluate expression",
+      "newline": "Insert new line",
+      "historyPrev": "Previous history item",
+      "historyNext": "Next history item",
+      "clear": "Clear field",
+      "help": "Open help",
+      "toggleTheme": "Toggle neon theme"
+    }
+  },
+  "theme": {
+    "enable": "Neon enabled",
+    "disable": "Neon off"
+  },
+  "clipboard": {
+    "success": "Copied to clipboard"
+  },
+  "errors": {
+    "empty": "Enter an expression to evaluate.",
+    "unknown": "Unexpected error"
+  },
+  "examples": [
+    "expand((x+1)^3)",
+    "factor(x^2-1)",
+    "subs(x=2)",
+    "sqrt(2)^2",
+    "sin(pi/2)",
+    "log(100,10)"
+  ]
+}
