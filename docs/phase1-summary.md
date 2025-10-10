@@ -21,3 +21,4 @@
 ## Units
 - Added core unit annotations with evaluator support for basic arithmetic and consistent formatting in results.
 
+- Added retro keyboard theme option with beige/grey/red palette.

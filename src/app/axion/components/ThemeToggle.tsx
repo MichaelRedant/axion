@@ -1,33 +1,30 @@
 "use client";
 
+import { useMemo } from "react";
+import { THEMES } from "../theme";
 import "../styles.css";
 
 interface ThemeToggleProps {
-  readonly enabled: boolean;
+  readonly value: string;
   readonly onToggle: () => void;
-  readonly enabledLabel: string;
-  readonly disabledLabel: string;
+  readonly labels: Record<string, string>;
 }
 
-/**
- * ThemeToggle switches between neon and a calmer dark theme.
- * Preference persistence is managed by the parent.
- */
-export function ThemeToggle({
-  enabled,
-  onToggle,
-  enabledLabel,
-  disabledLabel,
-}: ThemeToggleProps) {
+export function ThemeToggle({ value, onToggle, labels }: ThemeToggleProps) {
+  const label = useMemo(() => {
+    if (value in labels) return labels[value];
+    const theme = THEMES.find((item) => item.id === value);
+    return theme?.label ?? labels.default ?? "Theme";
+  }, [labels, value]);
+
   return (
     <button
       type="button"
-      aria-pressed={enabled}
       className="axion-button flex items-center gap-2 text-sm"
       onClick={onToggle}
+      aria-label="Schakel thema"
     >
-      <span aria-hidden>{enabled ? "🌌" : "🌑"}</span>
-      <span>{enabled ? enabledLabel : disabledLabel}</span>
+      <span aria-hidden>{label}</span>
     </button>
   );
 }

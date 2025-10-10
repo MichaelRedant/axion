@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AxionHero } from "./components/AxionHero";
@@ -19,7 +19,13 @@ import { addEntry, createEntry, togglePin, type HistoryState } from "./lib/utils
 import type { ShortcutAction } from "./lib/utils/keyboard";
 import "./styles.css";
 
-const THEME_STORAGE_KEY = "axion-theme";
+const THEME_STORAGE_KEY = "axion-theme"; // legacy key, kept for backward compatibility
+
+const THEME_CLASS_MAP: Record<string, string> = {
+  neon: "theme-neon",
+  retro: "theme-retro",
+  dark: "theme-dark",
+};
 
 type HistoryDirection = "prev" | "next";
 
@@ -40,7 +46,7 @@ function AxionShell() {
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
   const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
-  const [neon, setNeon] = useState(true);
+  const [theme, setThemeState] = useState("neon");
 
   const inputRef = useRef<CalcInputHandle | null>(null);
   const helpRef = useRef<HelpModalHandle | null>(null);
@@ -50,16 +56,24 @@ function AxionShell() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    setNeon(stored !== "dark");
+    if (stored && stored in THEME_CLASS_MAP) {
+      setThemeState(stored);
+    } else if (stored === "dark") {
+      setThemeState("dark");
+    } else {
+      setThemeState("neon");
+    }
   }, []);
 
   useEffect(() => {
-    const theme = neon ? "neon" : "dark";
+    const className = THEME_CLASS_MAP[theme] ?? "theme-neon";
     document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.remove(...Object.values(THEME_CLASS_MAP));
+    document.documentElement.classList.add(className);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     }
-  }, [neon]);
+  }, [theme]);
 
   useEffect(() => {
     if (!clipboardStatus) return;
@@ -138,9 +152,16 @@ function AxionShell() {
     [history.entries, input],
   );
 
-  const toggleTheme = useCallback(() => {
-    setNeon((value) => !value);
-  }, []);
+  const toggleTheme = useCallback(
+    (next?: string) => {
+      if (next) {
+        setThemeState(next);
+        return;
+      }
+      setThemeState((current) => (current === "neon" ? "retro" : current === "retro" ? "dark" : "neon"));
+    },
+    [],
+  );
 
   const handleShortcut = useCallback(
     (action: ShortcutAction) => {
@@ -225,10 +246,15 @@ function AxionShell() {
         <AxionHero />
         <div className="flex gap-2">
           <ThemeToggle
-            enabled={neon}
-            onToggle={toggleTheme}
-            enabledLabel={t("theme.enable")}
-            disabledLabel={t("theme.disable")}
+            value={theme}
+            onToggle={() => toggleTheme()}
+            labels={{
+              neon: t("theme.enable"),
+              retro: t("theme.retro"),
+              dark: t("theme.disable"),
+              default: t("theme.enable"),
+            }}
+
           />
           <HelpModal
             ref={helpRef}

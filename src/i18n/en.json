@@ -1,4 +1,4 @@
-﻿{
+{
   "hero": {
     "title": "AXION",
     "tagline": "Compute Beyond Logic.",
@@ -64,7 +64,8 @@
   },
   "theme": {
     "enable": "Neon enabled",
-    "disable": "Neon off"
+    "disable": "Neon off",
+    "retro": "Retro keyboard"
   },
   "clipboard": {
     "success": "Copied to clipboard"

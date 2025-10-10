@@ -1,4 +1,119 @@
-﻿  .axion-panel {
+[data-theme='retro'] .axion-hero {
+  border: 1px solid rgba(128, 106, 85, 0.4);
+  background: rgba(50, 38, 32, 0.88);
+  box-shadow: inset 0 -12px 45px rgba(20, 15, 12, 0.55);
+}
+
+[data-theme='retro'] .axion-hero__tagline {
+  @apply border-[rgba(138,110,85,0.6)] bg-[rgba(62,46,36,0.85)] text-[#c43432];
+}
+
+[data-theme='retro'] .axion-hero__title {
+  color: #c43432;
+  text-shadow: 0 0 15px rgba(196, 52, 50, 0.45);
+}
+
+[data-theme='retro'] .axion-hero__subtitle {
+  color: rgba(240, 231, 218, 0.75);
+}
+[data-theme='retro'] {
+  --ax-bg: #16110d;
+  --ax-grid: rgba(46, 29, 19, 0.55);
+  --ax-text: #f0e7da;
+  --ax-muted: rgba(240, 231, 218, 0.6);
+  --ax-panel: rgba(42, 30, 24, 0.92);
+  --ax-border: rgba(172, 137, 95, 0.35);
+  --ax-accent: #c43432;
+  --ax-accent-muted: rgba(196, 52, 50, 0.45);
+  --ax-secondary: #7a6a82;
+  --ax-button-bg: rgba(57, 42, 32, 0.9);
+  --ax-button-border: rgba(199, 175, 148, 0.28);
+  --ax-button-text: #f5efe5;
+  --ax-key-shadow: inset 0 -4px 0 rgba(32, 22, 18, 0.35);
+  --ax-highlight: rgba(196, 52, 50, 0.2);
+  --ax-hero-glow: linear-gradient(135deg, rgba(196, 52, 50, 0.15), rgba(90, 84, 106, 0.2));
+}
+
+[data-theme='retro'] .axion-panel {
+  @apply border-[rgba(199,175,148,0.25)] bg-[rgba(42,30,24,0.92)] shadow-none;
+  box-shadow: inset 0 -12px 32px rgba(22, 15, 12, 0.45);
+}
+
+[data-theme='retro'] .axion-button {
+  @apply border-[rgba(199,175,148,0.25)] bg-[rgba(57,42,32,0.9)] text-[var(--ax-button-text)];
+  box-shadow: var(--ax-key-shadow);
+}
+
+[data-theme='retro'] .axion-button::after {
+  background: linear-gradient(145deg, rgba(196,52,50,0.18), rgba(90,84,106,0.12));
+}
+
+[data-theme='retro'] .axion-button:hover::after,
+[data-theme='retro'] .axion-button:focus-visible::after {
+  @apply opacity-80;
+}
+
+[data-theme='retro'] .axion-button--function {
+  @apply border-[rgba(196,52,50,0.55)] text-[#ffdfcf];
+}
+
+[data-theme='retro'] .axion-button--operator {
+  @apply border-[rgba(90,84,106,0.5)] text-[#d5c5f0];
+}
+
+[data-theme='retro'] .axion-button--numeric {
+  @apply border-[rgba(199,175,148,0.3)] bg-[rgba(48,34,26,0.95)] text-[#f7ede2];
+}
+
+[data-theme='retro'] .axion-button--constant {
+  @apply border-[rgba(196,52,50,0.4)] text-[#ffc8bd];
+}
+
+[data-theme='retro'] .axion-button--utility {
+  @apply border-[rgba(199,175,148,0.28)] text-[rgba(240,231,218,0.7)];
+}
+
+[data-theme='retro'] .axion-button--variable {
+  @apply border-[rgba(90,84,106,0.45)] text-[#d7d4e3];
+}
+
+[data-theme='retro'] .axion-keypad-group {
+  @apply border-[rgba(199,175,148,0.2)] bg-[rgba(38,27,21,0.92)];
+  box-shadow: inset 0 -14px 45px rgba(18, 12, 9, 0.65);
+}
+
+[data-theme='retro'] .axion-keypad-group::before {
+  background: radial-gradient(circle at top left, rgba(196, 52, 50, 0.2), transparent 55%),
+    radial-gradient(circle at bottom right, rgba(90, 84, 106, 0.2), transparent 60%);
+}
+
+[data-theme='retro'] .axion-keypad-group--open {
+  box-shadow: inset 0 -18px 52px rgba(18, 12, 9, 0.6);
+}
+
+[data-theme='retro'] .axion-keypad-summary {
+  @apply text-[rgba(199,175,148,0.75)];
+}
+
+[data-theme='retro'] .axion-keypad-grid {
+  @apply border-t border-[rgba(199,175,148,0.15)] bg-[rgba(33,24,18,0.9)];
+}
+
+[data-theme='retro'] .axion-scanlines {
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(20, 12, 8, 0.18),
+    rgba(20, 12, 8, 0.18) 1px,
+    rgba(20, 12, 8, 0) 1px,
+    rgba(20, 12, 8, 0) 3px
+  );
+}
+
+[data-theme='retro'] body,
+[data-theme='retro'] .axion-button,
+[data-theme='retro'] .axion-panel {
+  color: var(--ax-text);
+}  .axion-panel {
     @apply rounded-xl border border-[rgba(0,255,242,0.15)] bg-[rgba(20,20,30,0.75)] shadow-neon backdrop-blur-md transition focus-within:shadow-violet;
   }
 
@@ -92,3 +207,5 @@
     );
     animation: scanlines 6s linear infinite;
   }
+
+
