@@ -192,7 +192,8 @@ function AxionShell() {
       if (!entry || typeof navigator === "undefined" || !navigator.clipboard) {
         return;
       }
-      const payload = `${entry.input}\nExact: ${entry.exact}\n~= ${entry.approx}`;
+      const approxText = entry.approx ?? "n/a";
+      const payload = `${entry.input}\nExact: ${entry.exact}\n~= ${approxText}`;
       await navigator.clipboard.writeText(payload);
       setClipboardStatus(t("clipboard.success"));
     },

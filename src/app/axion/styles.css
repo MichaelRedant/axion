@@ -16,6 +16,71 @@
     @apply opacity-100;
   }
 
+  .axion-button--function {
+    @apply border-[rgba(0,255,242,0.45)] text-[rgba(181,255,248,0.9)];
+  }
+
+  .axion-button--operator {
+    @apply border-[rgba(123,44,191,0.45)] text-[rgba(214,190,255,0.95)];
+  }
+
+  .axion-button--numeric {
+    @apply border-[rgba(255,255,255,0.12)] bg-[rgba(12,16,26,0.9)] text-[rgba(255,255,255,0.85)];
+  }
+
+  .axion-button--constant {
+    @apply border-[rgba(0,255,242,0.35)] text-[rgba(255,253,181,0.95)];
+  }
+
+  .axion-button--utility {
+    @apply border-[rgba(0,255,242,0.2)] text-[rgba(255,255,255,0.75)];
+  }
+
+  .axion-button--variable {
+    @apply border-[rgba(0,255,242,0.25)] text-[rgba(168,218,255,0.9)];
+  }
+
+  .axion-keypad-group {
+    @apply relative overflow-hidden rounded-xl border border-[rgba(0,255,242,0.12)] bg-[rgba(10,15,24,0.9)] transition;
+    box-shadow: inset 0 0 25px rgba(0, 255, 242, 0.05);
+  }
+
+  .axion-keypad-group::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: radial-gradient(circle at top left, rgba(0, 255, 242, 0.18), transparent 55%),
+      radial-gradient(circle at bottom right, rgba(123, 44, 191, 0.18), transparent 60%);
+  }
+
+  .axion-keypad-group:hover::before,
+  .axion-keypad-group:focus-within::before {
+    @apply opacity-100;
+  }
+
+  .axion-keypad-group--open {
+    box-shadow: inset 0 0 35px rgba(0, 255, 242, 0.08);
+  }
+
+  .axion-keypad-summary {
+    @apply flex cursor-pointer items-center justify-between gap-3 px-4 py-3 text-xs uppercase tracking-[0.35em] text-[rgba(0,255,242,0.65)];
+  }
+
+  .axion-keypad-summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .axion-keypad-caret {
+    @apply transform text-[rgba(0,255,242,0.45)] transition-transform;
+  }
+
+  .axion-keypad-caret--open {
+    @apply rotate-180;
+  }
+
+  .axion-keypad-grid {
+    @apply grid gap-2 border-t border-[rgba(0,255,242,0.12)] bg-[rgba(6,10,18,0.9)] px-4 pb-4 pt-3;
+  }
+
   .axion-scanlines {
     @apply pointer-events-none absolute inset-0 opacity-40 mix-blend-screen;
     background: repeating-linear-gradient(

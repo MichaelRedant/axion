@@ -1,4 +1,4 @@
-﻿import { evaluate } from "./evaluator";
+﻿import { evaluate, isComplexResult, isUnitResult, type ComplexResult, type UnitResult } from "./evaluator";
 import { parse } from "./parser";
 import { simplify } from "./simplify";
 import { tokenize, type Token } from "./tokenizer";
@@ -7,10 +7,41 @@ import type { Node } from "./ast";
 import { AxionError } from "./errors";
 import { analyzeProblem, type ProblemDescriptor } from "./problems";
 import type { SolutionBundle } from "./solution";
+import { buildExpressionContext } from "./context";
 import { registerStrategy, resolveStrategy } from "./strategies/registry";
-import { QuadraticStrategy } from "./strategies/quadratic";
+import {
+  QuadraticStrategy,
+  QUADRATIC_STRATEGY_DESCRIPTOR,
+} from "./strategies/quadratic";
+import {
+  MANIPULATION_STRATEGY_DESCRIPTOR,
+  ManipulationStrategy,
+} from "./strategies/manipulation";
+import {
+  SOLVE_STRATEGY_DESCRIPTOR,
+  SolveStrategy,
+} from "./strategies/solve";
+import {
+  CALCULUS_STRATEGY_DESCRIPTOR,
+  CalculusStrategy,
+} from "./strategies/calculus";
 
-registerStrategy(new QuadraticStrategy());
+registerStrategy({
+  descriptor: QUADRATIC_STRATEGY_DESCRIPTOR,
+  factory: () => new QuadraticStrategy(),
+});
+registerStrategy({
+  descriptor: MANIPULATION_STRATEGY_DESCRIPTOR,
+  factory: () => new ManipulationStrategy(),
+});
+registerStrategy({
+  descriptor: SOLVE_STRATEGY_DESCRIPTOR,
+  factory: () => new SolveStrategy(),
+});
+registerStrategy({
+  descriptor: CALCULUS_STRATEGY_DESCRIPTOR,
+  factory: () => new CalculusStrategy(),
+});
 
 export interface EvaluationSuccess {
   ok: true;
@@ -36,16 +67,19 @@ export function analyzeExpression(input: string): EvaluationResult {
     const tokens = tokenize(input);
     const ast = parse(tokens);
     const simplified = simplify(ast);
-    const descriptor = analyzeProblem(ast);
+    const descriptor = analyzeProblem(simplified);
+    const expression = buildExpressionContext(simplified);
 
-    const { result: strategyResult } = resolveStrategy(input, tokens, ast, simplified, descriptor);
-    let solution: SolutionBundle;
+    const { result: strategyResult } = resolveStrategy(
+      input,
+      tokens,
+      ast,
+      simplified,
+      descriptor,
+      expression,
+    );
 
-    if (strategyResult) {
-      solution = strategyResult;
-    } else {
-      solution = buildFallbackSolution(simplified, descriptor);
-    }
+    const solution = strategyResult?.solution ?? buildFallbackSolution(simplified, descriptor);
 
     return {
       ok: true,
@@ -74,14 +108,26 @@ export function analyzeExpression(input: string): EvaluationResult {
   }
 }
 
-function buildFallbackSolution(simplified: Node, descriptor: ProblemDescriptor): SolutionBundle {
+function buildFallbackSolution(
+  simplified: Node,
+  descriptor: ProblemDescriptor,
+): SolutionBundle {
   const exact = toKaTeX(simplified);
   let approxValue: number | null = null;
   let approx: string | null = null;
 
   try {
-    approxValue = evaluate(simplified, { precision: 12 });
-    approx = formatApproximation(approxValue);
+    const evaluation = evaluate(simplified, { precision: 12 });
+    if (isUnitResult(evaluation)) {
+      approxValue = null;
+      approx = formatUnitApproximation(evaluation);
+    } else if (isComplexResult(evaluation)) {
+      approxValue = null;
+      approx = formatComplexApproximation(evaluation);
+    } else {
+      approxValue = evaluation;
+      approx = formatApproximation(evaluation);
+    }
   } catch {
     approxValue = null;
     approx = null;
@@ -95,6 +141,7 @@ function buildFallbackSolution(simplified: Node, descriptor: ProblemDescriptor):
     approxValue,
     steps: [],
     plotConfig: null,
+    followUps: [],
   };
 }
 
@@ -102,3 +149,16 @@ function formatApproximation(value: number): string {
   const fixed = value.toFixed(8);
   return fixed.replace(/\.0+$/, "").replace(/0+$/, "");
 }
+
+function formatComplexApproximation(value: ComplexResult): string {
+  const real = formatApproximation(value.real);
+  const imaginary = formatApproximation(Math.abs(value.imaginary));
+  const sign = value.imaginary >= 0 ? "+" : "-";
+  return `${real} ${sign} ${imaginary}i`;
+}
+
+function formatUnitApproximation(value: UnitResult): string {
+  const magnitude = formatApproximation(value.magnitude);
+  return value.unit ? `${magnitude} ${value.unit}` : magnitude;
+}
+

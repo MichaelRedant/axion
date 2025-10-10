@@ -1,4 +1,6 @@
-﻿/**
+import type { AnnotationMap, ExpressionDomain } from "./core/types";
+
+/**
  * AST node definitions for Axion's algebra engine.
  * Each node carries source span information for precise diagnostics.
  */
@@ -9,13 +11,15 @@ export type Node =
   | BinaryNode
   | CallNode;
 
-export type BinaryOperator = "+" | "-" | "*" | "/" | "^" | "=";
+export type BinaryOperator = "+" | "-" | "*" | "/" | "^" | "=" | "->";
 export type UnaryOperator = "+" | "-";
 
 export interface BaseNode {
   readonly type: string;
   readonly start: number;
   readonly end: number;
+  readonly domain?: ExpressionDomain;
+  readonly annotations?: AnnotationMap;
 }
 
 export interface NumberNode extends BaseNode {

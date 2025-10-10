@@ -1,9 +1,19 @@
-﻿import Big from "big.js";
-import type { Node } from "../ast";
-import type { ComplexValue, SolutionBundle, SolutionStep } from "../solution";
-import type { StrategyContext, ProblemStrategy } from "./base";
-import type { PlotConfig } from "../solution";
+import Big from "big.js";
 import { cloneNode } from "../ast";
+import type { Node } from "../ast";
+import type {
+  ComplexValue,
+  ExplainReference,
+  PlotConfig,
+  SolutionBundle,
+  SolutionStep,
+} from "../solution";
+import type {
+  ProblemStrategy,
+  StrategyContext,
+  StrategyResult,
+  StrategyDescriptor,
+} from "./base";
 
 interface QuadraticCoefficients {
   readonly a: number;
@@ -12,112 +22,111 @@ interface QuadraticCoefficients {
   readonly variable: string;
 }
 
-export class QuadraticStrategy implements ProblemStrategy {
-  readonly type = "quadratic";
+export const QUADRATIC_STRATEGY_DESCRIPTOR: StrategyDescriptor = {
+  id: "strategy.quadratic",
+  handles: ["quadratic"],
+  priority: 100,
+};
 
-  match(context: StrategyContext): boolean {
+export class QuadraticStrategy implements ProblemStrategy {
+  readonly descriptor = QUADRATIC_STRATEGY_DESCRIPTOR;
+
+  matches(context: StrategyContext): boolean {
     return context.descriptor.type === "quadratic";
   }
 
-  solve(context: StrategyContext): SolutionBundle | null {
-    const coefficients = extractQuadraticCoefficients(context.ast, context.descriptor.metadata.variables[0]);
+  solve(context: StrategyContext): StrategyResult | null {
+    const variable =
+      context.descriptor.metadata.primaryVariable ??
+      context.descriptor.metadata.variables[0];
+    if (!variable) {
+      return null;
+    }
+
+    const coefficients = extractQuadraticCoefficients(context.ast, variable);
     if (!coefficients) {
       return null;
     }
 
-    const { a, b, c, variable } = coefficients;
-    if (a === 0) {
+    const { a, b, c } = coefficients;
+    if (almostZero(a)) {
       return null;
     }
 
-    const discriminant = b * b - 4 * a * c;
-    const deltaLatex = `\\Delta = ${formatNumber(b)}^{2} - 4 \\cdot ${formatNumber(a)} \\cdot ${formatNumber(c)} = ${formatNumber(discriminant)}`;
-
-    const twoA = 2 * a;
-    const sqrtDelta = discriminant >= 0 ? Math.sqrt(discriminant) : Math.sqrt(Math.abs(discriminant));
+    const discriminant = computeDiscriminant(a, b, c);
+    const sqrtAbs = Math.sqrt(Math.abs(discriminant));
+    const denominator = 2 * a;
     const hasComplex = discriminant < 0;
 
-    const realPart = -b / twoA;
-    const imaginaryPart = hasComplex ? sqrtDelta / twoA : 0;
-    const root1 = hasComplex ? complexValue(realPart, imaginaryPart, variable) : formatNumber((-b + sqrtDelta) / twoA);
-    const root2 = hasComplex ? complexValue(realPart, -imaginaryPart, variable) : formatNumber((-b - sqrtDelta) / twoA);
+    const exact = buildExactLatex(a, b, discriminant);
+    const steps = buildSteps({ a, b, c, discriminant, variable, exact });
+    const followUps = buildFollowUps();
+    const rationale = buildRationale(discriminant);
 
-    const exactLatex = `\\frac{-${formatNumber(b)} \\pm \\sqrt{${formatNumber(discriminant)}}}{2 \\cdot ${formatNumber(a)}}`;
+    let roots: Array<number | ComplexValue>;
+    let approx: string | null;
 
-    const steps: SolutionStep[] = [
-      {
-        id: "identify",
-        title: "Identificeer coÃ«fficiÃ«nten",
-        description: `Voor ${variable}^2 + ${variable} + constanten: a = ${formatNumber(a)}, b = ${formatNumber(b)}, c = ${formatNumber(c)}.`,
-        latex: `a = ${formatNumber(a)},\\; b = ${formatNumber(b)},\\; c = ${formatNumber(c)}`,
-      },
-      {
-        id: "discriminant",
-        title: "Bereken discriminant",
-        description: discriminant >= 0
-          ? `De discriminant is ${discriminant} (reÃ«le oplossingen).`
-          : `De discriminant is ${discriminant} (complexe oplossingen).`,
-        latex: deltaLatex,
-      },
-      {
-        id: "quadratic-formula",
-        title: "Pas de abc-formule toe",
-        description: "Gebruik de algemene formule voor kwadratische vergelijkingen.",
-        latex: `\\displaystyle ${variable}_{1,2} = ${exactLatex}`,
-      },
-    ];
-
-    const approx = hasComplex
-      ? `${variable}_1 â‰ˆ ${root1.approx}, ${variable}_2 â‰ˆ ${root2.approx}`
-      : `${variable}_1 â‰ˆ ${formatNumber((-b + sqrtDelta) / twoA)}, ${variable}_2 â‰ˆ ${formatNumber((-b - sqrtDelta) / twoA)}`;
-
-    const roots = hasComplex
-      ? [root1, root2]
-      : [roundTo((-b + sqrtDelta) / twoA), roundTo((-b - sqrtDelta) / twoA)];
+    if (hasComplex) {
+      const realPart = -b / denominator;
+      const imagPart = sqrtAbs / Math.abs(denominator);
+      const rootPlus = makeComplex(realPart, imagPart);
+      const rootMinus = makeComplex(realPart, -imagPart);
+      roots = [rootPlus, rootMinus];
+      approx = `${variable}_1 ~= ${rootPlus.approx}, ${variable}_2 ~= ${rootMinus.approx}`;
+    } else {
+      const rootPlus = roundTo((-b + sqrtAbs) / denominator);
+      const rootMinus = roundTo((-b - sqrtAbs) / denominator);
+      roots = [rootPlus, rootMinus];
+      approx = `${variable}_1 ~= ${formatNumber(rootPlus)}, ${variable}_2 ~= ${formatNumber(rootMinus)}`;
+    }
 
     const expressionNode = createPolynomialNode(context.ast);
-    const plotConfig: PlotConfig | null =
-      expressionNode && !hasComplex
-        ? {
-            type: "function",
-            variable,
-            expression: expressionNode,
-            domain: estimateDomain(roots as number[]),
-            samples: 120,
-            label: `f(${variable}) = ${formatPolynomial(a, b, c, variable)}`,
-          }
+    const plotConfig =
+      !hasComplex && expressionNode
+        ? buildPlotConfig(expressionNode, variable, roots as number[], { a, b, c })
         : null;
 
-    return {
+    const solution: SolutionBundle = {
       type: "quadratic",
       descriptor: context.descriptor,
-      exact: exactLatex,
+      exact,
       approx,
       approxValue: null,
       steps,
-      rationale:
-        "De quadratische formule levert de oplossingen zodra de discriminant is bepaald. Complexe oplossingen ontstaan wanneer de discriminant negatief is.",
+      rationale,
       plotConfig,
       details: {
         discriminant,
       },
       roots,
+      followUps,
     };
+
+    return { solution };
   }
 }
 
-function extractQuadraticCoefficients(ast: Node, variable?: string): QuadraticCoefficients | null {
-  if (!variable) return null;
+function extractQuadraticCoefficients(
+  ast: Node,
+  variable: string,
+): QuadraticCoefficients | null {
   const normalized = convertToPolynomial(ast);
-  if (!normalized) return null;
+  if (!normalized) {
+    return null;
+  }
+
   const coefficients = new Map<number, number>();
   if (!accumulateCoefficients(normalized, variable, coefficients, 1)) {
     return null;
   }
+
   const a = coefficients.get(2) ?? 0;
   const b = coefficients.get(1) ?? 0;
   const c = coefficients.get(0) ?? 0;
-  if (a === 0) return null;
+  if (almostZero(a)) {
+    return null;
+  }
+
   return { a, b, c, variable };
 }
 
@@ -126,13 +135,13 @@ function convertToPolynomial(node: Node): Node | null {
     return {
       type: "Binary",
       operator: "-",
-      left: node.left,
-      right: node.right,
+      left: cloneNode(node.left),
+      right: cloneNode(node.right),
       start: node.start,
       end: node.end,
     };
   }
-  return node;
+  return cloneNode(node);
 }
 
 function accumulateCoefficients(
@@ -143,17 +152,20 @@ function accumulateCoefficients(
 ): boolean {
   switch (node.type) {
     case "Number": {
-      terms.set(0, (terms.get(0) ?? 0) + scale * Number(node.value));
+      const value = Number(node.value);
+      terms.set(0, (terms.get(0) ?? 0) + scale * value);
       return true;
     }
     case "Symbol": {
-      if (node.name !== variable) return false;
+      if (node.name !== variable) {
+        return false;
+      }
       terms.set(1, (terms.get(1) ?? 0) + scale);
       return true;
     }
     case "Unary": {
-      const factor = node.operator === "-" ? -scale : scale;
-      return accumulateCoefficients(node.argument, variable, terms, factor);
+      const nextScale = node.operator === "-" ? -scale : scale;
+      return accumulateCoefficients(node.argument, variable, terms, nextScale);
     }
     case "Binary": {
       if (node.operator === "+") {
@@ -171,14 +183,20 @@ function accumulateCoefficients(
       if (node.operator === "*") {
         const left = extractMonomial(node.left, variable);
         const right = extractMonomial(node.right, variable);
-        if (!left || !right) return false;
+        if (!left || !right) {
+          return false;
+        }
         const degree = left.degree + right.degree;
         const coefficient = scale * left.coefficient * right.coefficient;
         terms.set(degree, (terms.get(degree) ?? 0) + coefficient);
         return true;
       }
       if (node.operator === "^") {
-        if (node.left.type === "Symbol" && node.left.name === variable && node.right.type === "Number") {
+        if (
+          node.left.type === "Symbol" &&
+          node.left.name === variable &&
+          node.right.type === "Number"
+        ) {
           const exponent = Number(node.right.value);
           terms.set(exponent, (terms.get(exponent) ?? 0) + scale);
           return true;
@@ -186,6 +204,8 @@ function accumulateCoefficients(
       }
       return false;
     }
+    case "Call":
+      return false;
     default:
       return false;
   }
@@ -201,12 +221,16 @@ function extractMonomial(node: Node, variable: string): Monomial | undefined {
     return { coefficient: Number(node.value), degree: 0 };
   }
   if (node.type === "Symbol") {
-    if (node.name !== variable) return undefined;
+    if (node.name !== variable) {
+      return undefined;
+    }
     return { coefficient: 1, degree: 1 };
   }
   if (node.type === "Unary") {
     const info = extractMonomial(node.argument, variable);
-    if (!info) return undefined;
+    if (!info) {
+      return undefined;
+    }
     return {
       coefficient: info.coefficient * (node.operator === "-" ? -1 : 1),
       degree: info.degree,
@@ -215,14 +239,20 @@ function extractMonomial(node: Node, variable: string): Monomial | undefined {
   if (node.type === "Binary" && node.operator === "*") {
     const left = extractMonomial(node.left, variable);
     const right = extractMonomial(node.right, variable);
-    if (!left || !right) return undefined;
+    if (!left || !right) {
+      return undefined;
+    }
     return {
       coefficient: left.coefficient * right.coefficient,
       degree: left.degree + right.degree,
     };
   }
   if (node.type === "Binary" && node.operator === "^") {
-    if (node.left.type === "Symbol" && node.left.name === variable && node.right.type === "Number") {
+    if (
+      node.left.type === "Symbol" &&
+      node.left.name === variable &&
+      node.right.type === "Number"
+    ) {
       return {
         coefficient: 1,
         degree: Number(node.right.value),
@@ -232,45 +262,101 @@ function extractMonomial(node: Node, variable: string): Monomial | undefined {
   return undefined;
 }
 
-function formatNumber(value: number): string {
-  const big = new Big(value);
-  return big.toPrecision(6).replace(/\.?0+$/, "");
+function computeDiscriminant(a: number, b: number, c: number): number {
+  return b * b - 4 * a * c;
 }
 
-function roundTo(value: number): number {
-  return Number(new Big(value).toFixed(6));
+function buildExactLatex(a: number, b: number, discriminant: number): string {
+  const numerator = formatNumber(-b);
+  const denominator = formatNumber(2 * a);
+  return `\\frac{${numerator} \\pm \\sqrt{${formatNumber(discriminant)}}}{${denominator}}`;
 }
 
-function complexValue(real: number, imaginary: number, variable: string): ComplexValue {
-  const realRounded = roundTo(real);
-  const imagRounded = roundTo(imaginary);
-  const latex =
-    imagRounded === 0
-      ? `${realRounded}`
-      : `${realRounded} ${imagRounded >= 0 ? "+" : "-"} ${Math.abs(imagRounded)}i`;
-  return {
-    real: realRounded,
-    imaginary: imagRounded,
-    latex,
-    approx: latex,
-  };
-}
+function buildSteps({
+  a,
+  b,
+  c,
+  discriminant,
+  variable,
+  exact,
+}: {
+  readonly a: number;
+  readonly b: number;
+  readonly c: number;
+  readonly discriminant: number;
+  readonly variable: string;
+  readonly exact: string;
+}): SolutionStep[] {
+  const discriminantLatex = [
+    "\\Delta = ",
+    `${formatNumber(b)}^{2} - 4 \\cdot ${formatNumber(a)} \\cdot ${formatNumber(c)}`,
+    ` = ${formatNumber(discriminant)}`,
+  ].join("");
 
-function estimateDomain(roots: number[]): [number, number] {
-  if (!roots.length) return [-10, 10];
-  const min = Math.min(...roots);
-  const max = Math.max(...roots);
-  const span = Math.max(5, Math.abs(max - min) + 2);
-  return [Math.floor(min - span), Math.ceil(max + span)];
-}
-
-function formatPolynomial(a: number, b: number, c: number, variable: string): string {
-  const parts = [
-    `${formatNumber(a)}${variable}^{2}`,
-    `${b >= 0 ? "+" : "-"} ${formatNumber(Math.abs(b))}${variable}`,
-    `${c >= 0 ? "+" : "-"} ${formatNumber(Math.abs(c))}`,
+  return [
+    {
+      id: "identify",
+      title: "Identificeer coefficienten",
+      description: `Lees de waarden van a, b en c af uit de vergelijking in ${variable}.`,
+      latex: `a = ${formatNumber(a)},\\; b = ${formatNumber(b)},\\; c = ${formatNumber(c)}`,
+    },
+    {
+      id: "discriminant",
+      title: "Bereken de discriminant",
+      description:
+        discriminant >= 0
+          ? "De discriminant is niet negatief, dus er zijn reele oplossingen."
+          : "De discriminant is negatief, dus de oplossingen zijn complex.",
+      latex: discriminantLatex,
+    },
+    {
+      id: "quadratic-formula",
+      title: "Pas de kwadratische formule toe",
+      description: "Vul de waarden in de formule en vereenvoudig indien mogelijk.",
+      latex: `\\displaystyle ${variable}_{1,2} = ${exact}`,
+    },
   ];
-  return parts.join(" ");
+}
+
+function buildFollowUps(): ExplainReference[] {
+  return [
+    {
+      id: "explain-step-identify",
+      label: "Leg stap 1 uit",
+      targetStepId: "identify",
+    },
+    {
+      id: "show-discriminant",
+      label: "Toon discriminant",
+      targetStepId: "discriminant",
+    },
+  ];
+}
+
+function buildRationale(discriminant: number): string {
+  if (discriminant > 0) {
+    return "De discriminant is positief, daarom snijdt de parabool de x-as in twee punten.";
+  }
+  if (almostZero(discriminant)) {
+    return "De discriminant is nul. De parabool raakt de x-as in precies een punt (dubbele wortel).";
+  }
+  return "De discriminant is negatief. De parabool snijdt de x-as niet en de oplossingen vormen een complex geconjugeerd paar.";
+}
+
+function buildPlotConfig(
+  expression: Node,
+  variable: string,
+  realRoots: number[],
+  { a, b, c }: { readonly a: number; readonly b: number; readonly c: number },
+): PlotConfig {
+  return {
+    type: "function",
+    variable,
+    expression,
+    domain: estimateDomain(realRoots),
+    samples: 200,
+    label: `f(${variable}) = ${formatPolynomial(a, b, c, variable)}`,
+  };
 }
 
 function createPolynomialNode(node: Node): Node | null {
@@ -285,4 +371,61 @@ function createPolynomialNode(node: Node): Node | null {
     };
   }
   return cloneNode(node);
+}
+
+function makeComplex(real: number, imaginary: number): ComplexValue {
+  const realRounded = roundTo(real);
+  const imagRounded = roundTo(imaginary);
+  const sign = imagRounded >= 0 ? "+" : "-";
+  const magnitude = formatNumber(Math.abs(imagRounded));
+
+  const latex =
+    imagRounded === 0
+      ? formatNumber(realRounded)
+      : `${formatNumber(realRounded)} ${sign} ${magnitude} i`;
+
+  return {
+    real: realRounded,
+    imaginary: imagRounded,
+    latex,
+    approx: latex,
+  };
+}
+
+function estimateDomain(roots: number[]): [number, number] {
+  if (!roots.length) {
+    return [-10, 10];
+  }
+  const min = Math.min(...roots);
+  const max = Math.max(...roots);
+  const span = Math.max(6, Math.abs(max - min) + 4);
+  return [Math.floor(min - span), Math.ceil(max + span)];
+}
+
+function formatPolynomial(
+  a: number,
+  b: number,
+  c: number,
+  variable: string,
+): string {
+  const parts = [
+    `${formatNumber(a)}${variable}^{2}`,
+    `${b >= 0 ? "+" : "-"} ${formatNumber(Math.abs(b))}${variable}`,
+    `${c >= 0 ? "+" : "-"} ${formatNumber(Math.abs(c))}`,
+  ];
+  return parts.join(" ");
+}
+
+function formatNumber(value: number): string {
+  const big = new Big(value);
+  return big.toPrecision(6).replace(/\.?0+$/, "");
+}
+
+function roundTo(value: number): number {
+  const big = new Big(value);
+  return Number(big.toFixed(6));
+}
+
+function almostZero(value: number, epsilon = 1e-9): boolean {
+  return Math.abs(value) < epsilon;
 }

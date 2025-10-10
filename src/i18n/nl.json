@@ -1,4 +1,4 @@
-{
+﻿{
   "hero": {
     "title": "AXION",
     "tagline": "Compute Beyond Logic.",
@@ -15,7 +15,11 @@
     "exact": "Exact",
     "approx": "Numeriek (n=8)",
     "empty": "Nog geen resultaat.",
-    "errorPrefix": "Fout"
+    "errorPrefix": "Fout",
+    "explainButton": "Explain modus",
+    "followUps": "Verdiepingsvragen",
+    "followUpHint": "Spring naar de juiste stap voor extra context.",
+    "intervals": "Intervallen"
   },
   "history": {
     "title": "Historiek",
@@ -27,7 +31,16 @@
     "pinnedLabel": "Gepind"
   },
   "keypad": {
-    "title": "Wetenschappelijk paneel"
+    "title": "Wetenschappelijk paneel",
+    "legend": "Tik op een toets om in te voegen",
+    "groups": {
+      "trig": "Goniometrie",
+      "log": "Log & exponenten",
+      "algebra": "Algebra",
+      "numbers": "Cijfers",
+      "constants": "Constanten",
+      "variables": "Letters"
+    }
   },
   "help": {
     "button": "Help & sneltoetsen",
@@ -66,6 +79,12 @@
     "subs(x=2)",
     "sqrt(2)^2",
     "sin(pi/2)",
-    "log(100,10)"
+    "log(100,10)",
+    "solve(x^2-3<0)",
+    "solve(x^3-1=0)",
+    "diff(sin(x)^2, x)",
+    "integrate(1/(1+x^2), x)",
+    "limit((sin(x))/x, x->0)"
   ]
 }
+

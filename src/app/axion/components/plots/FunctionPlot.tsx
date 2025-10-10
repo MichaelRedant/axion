@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
@@ -12,7 +12,7 @@ import {
   Legend,
 } from "chart.js";
 import type { PlotConfig } from "../../lib/algebra/solution";
-import { evaluate } from "../../lib/algebra/evaluator";
+import { evaluate, isComplexResult, isUnitResult } from "../../lib/algebra/evaluator";
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -92,8 +92,14 @@ function sampleFunction(expression: PlotConfig["expression"], variable: string, 
   for (let index = 0; index <= samples; index += 1) {
     const x = start + index * step;
     try {
-      const y = evaluate(expression, { env: { [variable]: x }, precision: 10 });
-      if (!Number.isNaN(y) && Number.isFinite(y)) {
+      const evaluation = evaluate(expression, { env: { [variable]: x }, precision: 10 });
+      const y =
+        isComplexResult(evaluation)
+          ? Math.abs(evaluation.imaginary) < 1e-9
+            ? evaluation.real
+            : null
+          : evaluation;
+      if (typeof y === "number" && Number.isFinite(y)) {
         points.push({ x, y });
       }
     } catch {

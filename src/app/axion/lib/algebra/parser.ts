@@ -12,7 +12,9 @@ const OPERATOR_TABLE: Record<BinaryOperator, OperatorBinding> = {
   "-": { lbp: 10, rbp: 10 },
   "*": { lbp: 20, rbp: 20 },
   "/": { lbp: 20, rbp: 20 },
-  "^": { lbp: 30, rbp: 29 }, // right associative\n  "=": { lbp: 5, rbp: 4 }
+  "^": { lbp: 30, rbp: 29 }, // right associative
+  "=": { lbp: 5, rbp: 4 },
+  "->": { lbp: 1, rbp: 0 },
 };
 
 /**

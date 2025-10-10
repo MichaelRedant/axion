@@ -87,7 +87,9 @@ export function HistoryPane({
                       <code className="font-mono text-sm text-[var(--ax-muted)]">{entry.exact}</code>
                     )}
                   </div>
-                  <p className="mt-2 font-mono text-xs text-amber-200">~= {entry.approx}</p>
+                  {entry.approx ? (
+                    <p className="mt-2 font-mono text-xs text-amber-200">~= {entry.approx}</p>
+                  ) : null}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button

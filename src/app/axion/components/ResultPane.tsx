@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
@@ -19,6 +19,7 @@ interface ResultPaneProps {
 export function ResultPane({ result, error, expression, katex }: ResultPaneProps) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<ResultTab>("result");
+  const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
 
   const exactHtml = useMemo(() => {
     if (!result || !katex) {
@@ -36,17 +37,48 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     return Object.entries(result.solution.details);
   }, [result?.solution.details]);
 
+  const followUps = useMemo(() => result?.solution.followUps ?? [], [result?.solution.followUps]);
+  const intervals = useMemo(() => result?.solution.intervals ?? [], [result?.solution.intervals]);
+
   const hasApprox = Boolean(result?.solution.approx);
   const hasSteps = Boolean(result?.solution.steps.length);
-  const hasExplain = Boolean(result?.solution.rationale || detailEntries.length || result?.solution.roots?.length);
+  const hasExplain = Boolean(
+    result?.solution.rationale ||
+      detailEntries.length ||
+      result?.solution.roots?.length ||
+      followUps.length ||
+      intervals.length,
+  );
+
+  const handleFollowUp = useCallback(
+    (targetStepId?: string) => {
+      if (!targetStepId) {
+        return;
+      }
+      setActiveTab("steps");
+      requestAnimationFrame(() => {
+        const element = stepRefs.current.get(targetStepId);
+        if (element) {
+          element.open = true;
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+    },
+    [setActiveTab],
+  );
 
   return (
     <section aria-live="polite" aria-label={t("result.title")} className="axion-panel relative flex flex-col gap-4 p-4">
       <header className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("result.title")}</span>
         {result ? (
-          <button type="button" className="axion-button text-xs" onClick={() => setActiveTab("explain")}>
-            Explain mode
+          <button
+            type="button"
+            className={`axion-button text-xs ${hasExplain ? "" : "cursor-not-allowed opacity-50"}`}
+            onClick={() => hasExplain && setActiveTab("explain")}
+            disabled={!hasExplain}
+          >
+            {t("result.explainButton")}
           </button>
         ) : null}
       </header>
@@ -85,17 +117,36 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
           {activeTab === "steps" ? (
             <div className="space-y-3">
-              {result.solution.steps.map((step) => {
+              {result.solution.steps.map((step, index) => {
                 const latex = step.latex && katex ? katex.renderToString(step.latex) : null;
                 return (
-                  <article key={step.id} className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/40 p-4">
-                    <h3 className="font-semibold text-sm text-neon">{step.title}</h3>
-                    <p className="mt-1 text-sm text-[rgba(255,255,255,0.75)]">{step.description}</p>
-                    {latex ? <div className="mt-2 text-base text-[var(--ax-text)]" dangerouslySetInnerHTML={{ __html: latex }} /> : null}
-                    {step.expression ? (
-                      <code className="mt-2 inline-block rounded bg-black/50 px-2 py-1 font-mono text-xs text-[var(--ax-muted)]">{step.expression}</code>
-                    ) : null}
-                  </article>
+                  <details
+                    key={step.id}
+                    ref={(element) => {
+                      if (!element) {
+                        stepRefs.current.delete(step.id);
+                        return;
+                      }
+                      stepRefs.current.set(step.id, element);
+                      if (!element.dataset.initialized) {
+                        element.open = index === 0;
+                        element.dataset.initialized = "true";
+                      }
+                    }}
+                    className="overflow-hidden rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/40"
+                  >
+                    <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3">
+                      <span className="font-semibold text-sm text-neon">{step.title}</span>
+                      <span className="text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">Step {index + 1}</span>
+                    </summary>
+                    <div className="border-t border-[rgba(0,255,242,0.15)] px-4 py-3">
+                      <p className="text-sm text-[rgba(255,255,255,0.75)]">{step.description}</p>
+                      {latex ? <div className="mt-2 text-base text-[var(--ax-text)]" dangerouslySetInnerHTML={{ __html: latex }} /> : null}
+                      {step.expression ? (
+                        <code className="mt-2 inline-block rounded bg-black/50 px-2 py-1 font-mono text-xs text-[var(--ax-muted)]">{step.expression}</code>
+                      ) : null}
+                    </div>
+                  </details>
                 );
               })}
             </div>
@@ -103,6 +154,30 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
           {activeTab === "explain" ? (
             <div className="space-y-4">
+              {followUps.length ? (
+                <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">
+                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                    {t("result.followUps")}
+                  </h4>
+                  <p className="mt-2 text-xs text-[rgba(255,255,255,0.65)]">{t("result.followUpHint")}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {followUps.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        className={`axion-button text-xs ${
+                          action.targetStepId && hasSteps ? "" : "cursor-not-allowed opacity-50"
+                        }`}
+                        onClick={() => handleFollowUp(action.targetStepId)}
+                        disabled={!action.targetStepId || !hasSteps}
+                        title={action.description ?? undefined}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
               {result.solution.rationale ? (
                 <p className="text-sm text-[rgba(255,255,255,0.75)]">{result.solution.rationale}</p>
               ) : null}
@@ -115,6 +190,16 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                     </div>
                   ))}
                 </dl>
+              ) : null}
+              {intervals.length ? (
+                <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">
+                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">{t("result.intervals")}</h4>
+                  <ul className="mt-2 space-y-1 text-sm font-mono text-[var(--ax-text)]">
+                    {intervals.map((interval, index) => (
+                      <li key={`interval-${index}`}>{interval.latex}</li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               {result.solution.roots ? (
                 <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">

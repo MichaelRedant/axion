@@ -1,4 +1,4 @@
-import type { Node } from "./ast";
+﻿import type { CallNode, Node } from "./ast";
 
 export type ProblemType =
   | "quadratic"
@@ -10,10 +10,29 @@ export type ProblemType =
   | "optimization"
   | "unknown";
 
+export interface MatrixStructure {
+  readonly operations: string[];
+  readonly dimensions: [number, number] | null;
+}
+
+export interface LimitMetadata {
+  readonly symbol: string;
+  readonly variable: string | null;
+  readonly approaching: string | null;
+}
+
 export interface ProblemMetadata {
   readonly variables: string[];
+  readonly primaryVariable: string | null;
   readonly degree?: number;
   readonly hasEquality: boolean;
+  readonly operators: string[];
+  readonly functions: string[];
+  readonly matrix: MatrixStructure | null;
+  readonly limit: LimitMetadata | null;
+  readonly hasDifferential: boolean;
+  readonly hasProbability: boolean;
+  readonly hasOptimization: boolean;
 }
 
 export interface ProblemDescriptor {
@@ -21,48 +40,143 @@ export interface ProblemDescriptor {
   readonly metadata: ProblemMetadata;
 }
 
-export function analyzeProblem(ast: Node): ProblemDescriptor {
-  const variables = new Set<string>();
-  const hasEquality = containsOperator(ast, "=");
-  collectVariables(ast, variables);
+import { isUnitSymbol } from "./core/units";
 
-  const metadata: ProblemMetadata = {
-    variables: [...variables],
-    hasEquality,
-  };
+const RESERVED_SYMBOLS = new Set(["pi", "e"]);
+const MATRIX_FUNCTIONS = new Set(["matrix", "mat", "det", "adj", "inv", "inverse", "transpose", "rank"]);
+const LIMIT_FUNCTIONS = new Set(["lim", "limit"]);
+const DIFFERENTIAL_FUNCTIONS = new Set(["diff", "d", "deriv", "derivative", "integrate", "int"]);
+const PROBABILITY_FUNCTIONS = new Set(["p", "pr", "pdf", "cdf", "pmf", "binom", "comb", "ncr", "bernoulli", "poisson", "normal"]);
+const OPTIMIZATION_FUNCTIONS = new Set(["min", "max", "argmin", "argmax", "optimize", "lagrange", "gradient"]);
 
-  const candidate = detectPolynomialDegree(ast, metadata.variables[0]);
-  if (candidate !== undefined) {
-    metadata.degree = candidate;
-    if (candidate === 2) {
-      return { type: "quadratic", metadata };
-    }
-    if (candidate === 1) {
-      return { type: "linear", metadata };
-    }
+export class ProblemClassifier {
+  classify(ast: Node): ProblemDescriptor {
+    const metadata = collectMetadata(ast);
+    const type = inferProblemType(ast, metadata);
+    return { type, metadata };
   }
+}
+
+export function analyzeProblem(ast: Node): ProblemDescriptor {
+  return new ProblemClassifier().classify(ast);
+}
+
+function collectMetadata(ast: Node): ProblemMetadata {
+  const variables = new Set<string>();
+  const operators = new Set<string>();
+  const functions = new Set<string>();
+  const matrixOps = new Set<string>();
+  const probabilitySignals = new Set<string>();
+  const optimizationSignals = new Set<string>();
+
+  let hasDifferential = false;
+  let limitMetadata: LimitMetadata | null = null;
+  let firstMatrixCall: CallNode | null = null;
+
+  traverse(ast, (node) => {
+    if (node.type === "Symbol" && !RESERVED_SYMBOLS.has(node.name) && !isUnitSymbol(node.name)) {
+      variables.add(node.name);
+      if (isDifferentialSymbol(node.name)) {
+        hasDifferential = true;
+      }
+    }
+
+    if (node.type === "Binary") {
+      operators.add(node.operator);
+    }
+
+    if (node.type === "Call") {
+      functions.add(node.callee);
+      const callee = node.callee.toLowerCase();
+      if (MATRIX_FUNCTIONS.has(callee)) {
+        matrixOps.add(callee);
+        if (!firstMatrixCall && (callee === "matrix" || callee === "mat")) {
+          firstMatrixCall = node;
+        }
+      }
+      if (LIMIT_FUNCTIONS.has(callee) && !limitMetadata) {
+        limitMetadata = buildLimitMetadata(node);
+      }
+      if (DIFFERENTIAL_FUNCTIONS.has(callee)) {
+        hasDifferential = true;
+      }
+      if (PROBABILITY_FUNCTIONS.has(callee)) {
+        probabilitySignals.add(callee);
+      }
+      if (OPTIMIZATION_FUNCTIONS.has(callee)) {
+        optimizationSignals.add(callee);
+      }
+    }
+  });
+
+  const variableList = [...variables];
+  const primaryVariable = variableList.find((name) => name.length === 1) ?? variableList[0] ?? null;
+  const degree = detectPolynomialDegree(ast, primaryVariable ?? undefined);
+  const hasEquality = operators.has("=");
+
+  const matrix: MatrixStructure | null = matrixOps.size
+    ? {
+        operations: [...matrixOps].sort(),
+        dimensions: inferMatrixDimensions(firstMatrixCall),
+      }
+    : null;
 
   return {
-    type: "unknown",
-    metadata,
+    variables: variableList,
+    primaryVariable,
+    degree,
+    hasEquality,
+    operators: [...operators].sort(),
+    functions: [...functions].sort(),
+    matrix,
+    limit: limitMetadata,
+    hasDifferential,
+    hasProbability: probabilitySignals.size > 0,
+    hasOptimization: optimizationSignals.size > 0,
   };
 }
 
-function collectVariables(node: Node, variables: Set<string>) {
+function inferProblemType(ast: Node, metadata: ProblemMetadata): ProblemType {
+  if (metadata.hasDifferential) {
+    return "differential";
+  }
+  if (metadata.limit) {
+    return "limit";
+  }
+  if (metadata.matrix) {
+    return "matrix";
+  }
+  if (metadata.hasProbability) {
+    return "probability";
+  }
+  if (metadata.hasOptimization) {
+    return "optimization";
+  }
+  if (metadata.degree === 2) {
+    return "quadratic";
+  }
+  if (metadata.degree === 1) {
+    return "linear";
+  }
+  if (containsDifferentialNotation(ast)) {
+    return "differential";
+  }
+  return "unknown";
+}
+
+function traverse(node: Node, visit: (node: Node) => void) {
+  visit(node);
   switch (node.type) {
-    case "Symbol":
-      variables.add(node.name);
-      break;
     case "Unary":
-      collectVariables(node.argument, variables);
+      traverse(node.argument, visit);
       break;
     case "Binary":
-      collectVariables(node.left, variables);
-      collectVariables(node.right, variables);
+      traverse(node.left, visit);
+      traverse(node.right, visit);
       break;
     case "Call":
       for (const arg of node.args) {
-        collectVariables(arg, variables);
+        traverse(arg, visit);
       }
       break;
     default:
@@ -70,20 +184,59 @@ function collectVariables(node: Node, variables: Set<string>) {
   }
 }
 
-function containsOperator(node: Node, operator: string): boolean {
-  if (node.type === "Binary" && node.operator === operator) {
-    return true;
+function buildLimitMetadata(node: CallNode): LimitMetadata {
+  const firstArg = node.args[0];
+  const variable = extractSymbolName(firstArg);
+  const secondArg = node.args[1];
+  const approaching = extractApproachTarget(secondArg);
+  return {
+    symbol: node.callee,
+    variable,
+    approaching,
+  };
+}
+
+function extractSymbolName(node: Node | undefined): string | null {
+  if (!node) return null;
+  if (node.type === "Symbol") return isUnitSymbol(node.name) ? null : node.name;
+  if (node.type === "Binary" && node.operator === "=") {
+    return extractSymbolName(node.left);
   }
-  if (node.type === "Unary") {
-    return containsOperator(node.argument, operator);
+  return null;
+}
+
+function extractApproachTarget(node: Node | undefined): string | null {
+  if (!node) return null;
+  if (node.type === "Number") return node.value;
+  if (node.type === "Symbol") return isUnitSymbol(node.name) ? null : node.name;
+  if (node.type === "Call") return node.callee;
+  return null;
+}
+
+function inferMatrixDimensions(node: CallNode | null): [number, number] | null {
+  if (!node) return null;
+  if (!node.args.length) return null;
+
+  // Heuristic: matrix(row(...), row(...))
+  const rowCalls = node.args.filter((arg): arg is CallNode => arg.type === "Call");
+  if (rowCalls.length === node.args.length && rowCalls.length > 0) {
+    const columnCounts = rowCalls.map((row) => row.args.length);
+    const uniform = columnCounts.every((count) => count === columnCounts[0]);
+    if (uniform) {
+      return [rowCalls.length, columnCounts[0] ?? 0];
+    }
   }
-  if (node.type === "Binary") {
-    return containsOperator(node.left, operator) || containsOperator(node.right, operator);
+
+  // Heuristic: matrix(rows, cols, ...)
+  if (node.args[0]?.type === "Number" && node.args[1]?.type === "Number") {
+    const rows = Number(node.args[0].value);
+    const cols = Number(node.args[1].value);
+    if (Number.isFinite(rows) && Number.isFinite(cols)) {
+      return [rows, cols];
+    }
   }
-  if (node.type === "Call") {
-    return node.args.some((arg) => containsOperator(arg, operator));
-  }
-  return false;
+
+  return null;
 }
 
 function detectPolynomialDegree(node: Node, variable?: string): number | undefined {
@@ -91,10 +244,9 @@ function detectPolynomialDegree(node: Node, variable?: string): number | undefin
   const normalized = normalizeEquation(node);
   if (!normalized) return undefined;
   const degrees = collectDegrees(normalized, variable);
-  if (!degrees) return undefined;
+  if (!degrees?.size) return undefined;
   const maxDegree = Math.max(...degrees.keys());
-  if (!Number.isFinite(maxDegree)) return undefined;
-  return maxDegree;
+  return Number.isFinite(maxDegree) ? maxDegree : undefined;
 }
 
 function normalizeEquation(node: Node): Node | undefined {
@@ -216,3 +368,27 @@ function extractMonomial(node: Node, variable: string): MonomialInfo | undefined
   }
   return undefined;
 }
+
+function isDifferentialSymbol(name: string): boolean {
+  if (name.includes("'")) return true;
+  if (name.startsWith("d") && name.length > 1) return true;
+  return false;
+}
+
+function containsDifferentialNotation(node: Node): boolean {
+  if (node.type === "Call" && DIFFERENTIAL_FUNCTIONS.has(node.callee.toLowerCase())) {
+    return true;
+  }
+  if (node.type === "Binary") {
+    return containsDifferentialNotation(node.left) || containsDifferentialNotation(node.right);
+  }
+  if (node.type === "Unary") {
+    return containsDifferentialNotation(node.argument);
+  }
+  return false;
+}
+
+
+
+
+

@@ -25,6 +25,18 @@ export interface ComplexValue {
   readonly approx: string;
 }
 
+export interface ExplainReference {
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly targetStepId?: string;
+}
+
+export interface SolutionInterval {
+  readonly latex: string;
+  readonly description?: string;
+}
+
 export interface SolutionBundle {
   readonly type: ProblemType;
   readonly descriptor: ProblemDescriptor;
@@ -36,4 +48,6 @@ export interface SolutionBundle {
   readonly plotConfig?: PlotConfig | null;
   readonly details?: Record<string, unknown>;
   readonly roots?: Array<number | ComplexValue>;
+  readonly followUps?: ExplainReference[];
+  readonly intervals?: SolutionInterval[];
 }

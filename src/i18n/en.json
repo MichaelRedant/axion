@@ -1,4 +1,4 @@
-{
+﻿{
   "hero": {
     "title": "AXION",
     "tagline": "Compute Beyond Logic.",
@@ -15,7 +15,11 @@
     "exact": "Exact",
     "approx": "Numeric (n=8)",
     "empty": "No result yet.",
-    "errorPrefix": "Error"
+    "errorPrefix": "Error",
+    "explainButton": "Explain mode",
+    "followUps": "Explain actions",
+    "followUpHint": "Jump to the relevant derivation step.",
+    "intervals": "Intervals"
   },
   "history": {
     "title": "History",
@@ -27,7 +31,16 @@
     "pinnedLabel": "Pinned"
   },
   "keypad": {
-    "title": "Scientific panel"
+    "title": "Scientific panel",
+    "legend": "Tap a key to insert",
+    "groups": {
+      "trig": "Trigonometry",
+      "log": "Log & exponent",
+      "algebra": "Algebra",
+      "numbers": "Digits",
+      "constants": "Constants",
+      "variables": "Letters"
+    }
   },
   "help": {
     "button": "Help & shortcuts",
@@ -66,6 +79,12 @@
     "subs(x=2)",
     "sqrt(2)^2",
     "sin(pi/2)",
-    "log(100,10)"
+    "log(100,10)",
+    "solve(x^2-3<0)",
+    "solve(x^3-1=0)",
+    "diff(sin(x)^2, x)",
+    "integrate(1/(1+x^2), x)",
+    "limit((sin(x))/x, x->0)"
   ]
 }
+

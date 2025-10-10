@@ -1,4 +1,4 @@
-import { TokenizerError } from "./errors";
+﻿import { TokenizerError } from "./errors";
 
 export type TokenType =
   | "number"
@@ -78,6 +78,17 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
+    if (char === "-" && input[index + 1] === ">") {
+      tokens.push({
+        type: "operator",
+        value: "->",
+        start: index,
+        end: index + 2,
+      });
+      index += 2;
+      continue;
+    }
+
     if ("+-*/^=".includes(char)) {
       tokens.push({
         type: "operator",
@@ -127,3 +138,4 @@ export function tokenize(input: string): Token[] {
 
   return tokens;
 }
+

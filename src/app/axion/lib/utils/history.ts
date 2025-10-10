@@ -4,7 +4,7 @@ export interface HistoryEntry {
   readonly id: string;
   readonly input: string;
   readonly exact: string;
-  readonly approx: string;
+  readonly approx: string | null;
   readonly timestamp: number;
   readonly pinned: boolean;
 }

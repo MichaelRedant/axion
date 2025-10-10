@@ -1,4 +1,4 @@
-import type { BinaryNode, Node, UnaryNode } from "./ast";
+﻿import type { BinaryNode, Node, UnaryNode } from "./ast";
 
 const BINARY_PRECEDENCE: Record<string, number> = {
   "+": 1,
@@ -6,6 +6,7 @@ const BINARY_PRECEDENCE: Record<string, number> = {
   "*": 2,
   "/": 2,
   "^": 3,
+  "->": 0,
 };
 
 /**
@@ -65,6 +66,9 @@ function formatBinary(node: BinaryNode, parentPrecedence: number): string {
     case "^":
       expression = `${toKaTeX(node.left, precedence)}^{${toKaTeX(node.right, precedence)}}`;
       break;
+    case "->":
+      expression = `${left} \\to ${right}`;
+      break;
     default:
       expression = `${left} ${node.operator} ${right}`;
   }
@@ -94,12 +98,16 @@ function formatCallee(name: string): string {
     case "sin":
     case "cos":
     case "tan":
+    case "exp":
     case "log":
     case "ln":
       return `\\${name}`;
     case "sqrt":
       return "\\sqrt";
+    case "arctan":
+      return "\\arctan";
     default:
       return `\\operatorname{${name}}`;
   }
 }
+
