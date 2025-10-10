@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import clsx from "clsx";
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
 import type { KatexHandle } from "../lib/hooks/useKatex";
@@ -68,13 +69,20 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   );
 
   return (
-    <section aria-live="polite" aria-label={t("result.title")} className="axion-panel relative flex flex-col gap-4 p-4">
-      <header className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+    <section
+      aria-live="polite"
+      aria-label={t("result.title")}
+      className="axion-panel axion-panel--result relative flex flex-col gap-5 p-5"
+    >
+      <header className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("result.title")}</span>
         {result ? (
           <button
             type="button"
-            className={`axion-button text-xs ${hasExplain ? "" : "cursor-not-allowed opacity-50"}`}
+            className={clsx(
+              "axion-button axion-button--ghost text-xs",
+              !hasExplain && "cursor-not-allowed opacity-50",
+            )}
             onClick={() => hasExplain && setActiveTab("explain")}
             disabled={!hasExplain}
           >
@@ -85,7 +93,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
       {result ? (
         <>
-          <nav className="flex gap-2 text-xs uppercase tracking-[0.3em]">
+          <nav className="axion-tablist flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em]">
             <TabButton label="Result" active={activeTab === "result"} onClick={() => setActiveTab("result")} />
             <TabButton label="Steps" active={activeTab === "steps"} disabled={!hasSteps} onClick={() => setActiveTab("steps")} />
             <TabButton label="Explain" active={activeTab === "explain"} disabled={!hasExplain} onClick={() => setActiveTab("explain")} />
@@ -93,24 +101,31 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
           {activeTab === "result" ? (
             <div className="space-y-4">
-              <div className="rounded-lg border border-[rgba(0,255,242,0.2)] bg-black/40 p-4">
-                <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.exact")}</p>
-                <div className="mt-2 min-h-[48px] text-lg" data-testid="result-exact">
-                  {exactHtml ? (
-                    <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
-                  ) : (
-                    <code className="font-mono text-sm text-[var(--ax-muted)]">{result.solution.exact}</code>
-                  )}
+              <div
+                className={clsx(
+                  "grid gap-4",
+                  hasApprox ? "md:grid-cols-2" : "md:grid-cols-1",
+                )}
+              >
+                <div className="axion-metric-card">
+                  <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.exact")}</p>
+                  <div className="mt-2 min-h-[48px] text-lg" data-testid="result-exact">
+                    {exactHtml ? (
+                      <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
+                    ) : (
+                      <code className="font-mono text-sm text-[var(--ax-muted)]">{result.solution.exact}</code>
+                    )}
+                  </div>
                 </div>
+                {hasApprox ? (
+                  <div className="axion-metric-card border-[rgba(123,44,191,0.35)]">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.approx")}</p>
+                    <p className="mt-2 font-mono text-base text-amber-200" data-testid="result-approx">
+                      ~ {result.solution.approx}
+                    </p>
+                  </div>
+                ) : null}
               </div>
-              {hasApprox ? (
-                <div className="rounded-lg border border-[rgba(123,44,191,0.35)] bg-black/40 p-4">
-                  <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.approx")}</p>
-                  <p className="mt-2 font-mono text-base text-amber-200" data-testid="result-approx">
-                    ≈ {result.solution.approx}
-                  </p>
-                </div>
-              ) : null}
               {result.solution.plotConfig ? <FunctionPlot config={result.solution.plotConfig} /> : null}
             </div>
           ) : null}
@@ -254,9 +269,11 @@ function TabButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`axion-button ${
-        active ? "border-neon text-neon" : "border-[rgba(0,255,242,0.1)] text-[var(--ax-muted)]"
-      } ${disabled ? "cursor-not-allowed opacity-50" : ""}`}
+      className={clsx(
+        "axion-button axion-tab",
+        active && "axion-tab--active",
+        disabled && "axion-tab--disabled",
+      )}
     >
       {label}
     </button>

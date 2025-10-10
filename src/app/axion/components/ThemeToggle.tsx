@@ -20,7 +20,7 @@ export function ThemeToggle({ value, onToggle, labels }: ThemeToggleProps) {
   return (
     <button
       type="button"
-      className="axion-button flex items-center gap-2 text-sm"
+      className="axion-button axion-button--ghost flex items-center gap-2 text-sm"
       onClick={onToggle}
       aria-label="Schakel thema"
     >

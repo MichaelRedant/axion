@@ -196,7 +196,7 @@
     @apply grid gap-2 border-t border-[rgba(0,255,242,0.12)] bg-[rgba(6,10,18,0.9)] px-4 pb-4 pt-3;
   }
 
-  .axion-scanlines {
+.axion-scanlines {
     @apply pointer-events-none absolute inset-0 opacity-40 mix-blend-screen;
     background: repeating-linear-gradient(
       to bottom,
@@ -209,3 +209,181 @@
   }
 
 
+.axion-shell {
+  --ax-shell-sticky-offset: 7.5rem;
+}
+
+.axion-shell__header {
+  @apply gap-6;
+}
+
+.axion-shell__workspace {
+  @apply gap-6;
+}
+
+.axion-shell__quick {
+  @apply relative overflow-hidden;
+}
+
+.axion-shell__quick::before {
+  content: "";
+  @apply pointer-events-none absolute inset-0 opacity-70;
+  background: radial-gradient(
+      circle at top right,
+      rgba(0, 255, 242, 0.18),
+      transparent 55%
+    ),
+    radial-gradient(circle at bottom left, rgba(123, 44, 191, 0.22), transparent 60%);
+}
+
+.axion-shell__quick::after {
+  content: "";
+  @apply pointer-events-none absolute -bottom-16 right-0 h-32 w-32 rounded-full opacity-40 blur-3xl;
+  background: radial-gradient(circle, rgba(0, 255, 242, 0.55), transparent 65%);
+}
+
+.axion-shell__eyebrow {
+  color: rgba(0, 255, 242, 0.75);
+}
+
+.axion-shell__examples {
+  @apply flex flex-wrap gap-2;
+}
+
+.axion-shell__example-chip {
+  @apply px-4 py-2;
+  text-transform: uppercase;
+  letter-spacing: 0.32em;
+  white-space: nowrap;
+}
+
+.axion-panel--input {
+  @apply backdrop-blur-xl;
+}
+
+.axion-button--ghost {
+  @apply border-[rgba(0,255,242,0.2)] text-[rgba(255,255,255,0.75)];
+  background-color: transparent;
+}
+
+.axion-button--ghost::after {
+  display: none;
+}
+
+.axion-button--ghost:hover,
+.axion-button--ghost:focus-visible {
+  @apply border-neon text-neon;
+}
+
+.axion-button--primary {
+  @apply border-neon bg-[rgba(0,18,28,0.92)] text-neon shadow-[0_0_22px_rgba(0,255,242,0.35)];
+}
+
+.axion-button--primary:hover,
+.axion-button--primary:focus-visible {
+  @apply border-neon text-neon;
+}
+
+.axion-tablist {
+  @apply -mb-1 overflow-x-auto pb-1;
+  scrollbar-width: none;
+}
+
+.axion-tablist::-webkit-scrollbar {
+  display: none;
+}
+
+.axion-tab {
+  @apply border-[rgba(0,255,242,0.15)] bg-[rgba(8,12,20,0.7)] text-[rgba(255,255,255,0.7)] transition;
+}
+
+.axion-tab:hover,
+.axion-tab:focus-visible {
+  @apply border-neon text-neon;
+}
+
+.axion-tab--active {
+  @apply border-neon text-neon shadow-[0_0_18px_rgba(0,255,242,0.35)];
+}
+
+.axion-tab--disabled {
+  @apply pointer-events-none opacity-50;
+}
+
+.axion-panel--result {
+  @apply backdrop-blur-xl;
+}
+
+.axion-panel--result .axion-metric-card {
+  @apply border-[rgba(0,255,242,0.18)];
+}
+
+.axion-panel--result .axion-metric-card:hover,
+.axion-panel--result .axion-metric-card:focus-within {
+  @apply border-neon;
+}
+
+.axion-panel--history {
+  @apply backdrop-blur-xl;
+}
+
+.axion-panel--keypad {
+  @apply backdrop-blur-xl;
+}
+
+.axion-metric-card {
+  @apply rounded-2xl border border-[rgba(0,255,242,0.18)] bg-black/40 p-4 transition;
+}
+
+.axion-metric-card:hover,
+.axion-metric-card:focus-within {
+  @apply border-neon;
+}
+
+@screen xl {
+  .axion-shell__workspace {
+    grid-auto-rows: minmax(0, auto);
+  }
+
+  .axion-panel--keypad,
+  .axion-panel--history {
+    position: sticky;
+    top: var(--ax-shell-sticky-offset);
+  }
+
+  .axion-panel--result {
+    position: relative;
+  }
+}
+
+.axion-keypad-groups {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 242, 0.25) transparent;
+}
+
+.axion-keypad-groups::-webkit-scrollbar {
+  width: 6px;
+}
+
+.axion-keypad-groups::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 242, 0.25);
+  border-radius: 9999px;
+}
+
+.axion-history-list {
+  @apply pr-1;
+}
+
+@screen xl {
+  .axion-history-list {
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      rgba(0, 0, 0, 0.7) 8%,
+      #000 24%,
+      #000 76%,
+      rgba(0, 0, 0, 0.7) 92%,
+      transparent 100%
+    );
+  }
+}

@@ -4,6 +4,11 @@
     "tagline": "Compute Beyond Logic.",
     "subtitle": "Retro-futuristic algebra calculator for exact mathematics."
   },
+  "workspace": {
+    "quickHeading": "Quick actions",
+    "quickDescription": "Switch themes, open help, or drop in an example to get started.",
+    "examplesHeading": "Try one of these"
+  },
   "input": {
     "label": "Input",
     "placeholder": "Enter an expression such as sin(pi/2) + sqrt(2)^2",

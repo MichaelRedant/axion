@@ -36,11 +36,11 @@ export function HistoryPane({
   );
 
   return (
-    <section className="axion-panel flex max-h-[360px] flex-col gap-3 overflow-hidden p-4">
-      <header className="flex items-center justify-between text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+    <section className="axion-panel axion-panel--history flex flex-col gap-4 p-5 xl:max-h-[calc(100vh-320px)] xl:overflow-hidden">
+      <header className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("history.title")}</span>
         {statusMessage ? (
-          <span aria-live="assertive" className="text-amber-300">
+          <span aria-live="assertive" className="text-[11px] uppercase tracking-[0.25em] text-amber-300">
             {statusMessage}
           </span>
         ) : null}
@@ -51,7 +51,7 @@ export function HistoryPane({
           {t("history.empty")}
         </p>
       ) : (
-        <ul className="flex-1 space-y-3 overflow-y-auto pr-1">
+        <ul className="axion-history-list flex-1 space-y-3 overflow-y-auto pr-1">
           {entries.map((entry) => {
             const formattedTime = formatter.format(new Date(entry.timestamp));
             let exactHtml: string | null = null;
@@ -66,7 +66,7 @@ export function HistoryPane({
             return (
               <li
                 key={entry.id}
-                className="rounded-lg border border-[rgba(0,255,242,0.18)] bg-black/40 p-3"
+                className="axion-metric-card space-y-3"
               >
                 <div className="flex items-center justify-between gap-2 text-xs text-[rgba(255,255,255,0.55)]">
                   <span>{formattedTime}</span>
@@ -94,21 +94,21 @@ export function HistoryPane({
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="axion-button text-xs"
+                    className="axion-button axion-button--ghost text-xs"
                     onClick={() => onRestore(entry.id)}
                   >
                     {t("history.restore")}
                   </button>
                   <button
                     type="button"
-                    className="axion-button text-xs"
+                    className="axion-button axion-button--ghost text-xs"
                     onClick={() => onCopy(entry.id)}
                   >
                     {t("history.copy")}
                   </button>
                   <button
                     type="button"
-                    className="axion-button text-xs"
+                    className="axion-button axion-button--ghost text-xs"
                     onClick={() => onPin(entry.id)}
                   >
                     {entry.pinned ? t("history.unpin") : t("history.pin")}

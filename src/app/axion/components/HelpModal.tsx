@@ -62,7 +62,7 @@ export const HelpModal = forwardRef<HelpModalHandle, HelpModalProps>(
       <>
         <button
           type="button"
-          className="axion-button text-sm"
+          className="axion-button axion-button--ghost text-sm"
           onClick={() => setOpen(true)}
         >
           {t("help.button")}

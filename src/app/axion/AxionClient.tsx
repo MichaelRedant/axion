@@ -237,36 +237,87 @@ function AxionShell() {
 
   const examples = useMemo(() => dictionary.examples ?? [], [dictionary.examples]);
 
+  const workspaceCopy = useMemo(() => {
+    const { quickHeading, quickDescription, examplesHeading } = dictionary.workspace ?? {};
+
+    return {
+      quickHeading: quickHeading ?? t("help.subtitle"),
+      quickDescription: quickDescription ?? t("hero.subtitle"),
+      examplesHeading: examplesHeading ?? t("help.examples"),
+    };
+  }, [dictionary.workspace, t]);
+
+  const exampleSuggestions = useMemo(() => examples.slice(0, 4), [examples]);
+
+  const handleExample = useCallback(
+    (example: string) => {
+      setInput(example);
+      setResult(null);
+      setError(null);
+      historyCursorRef.current = null;
+      requestAnimationFrame(() => inputRef.current?.focus());
+    },
+    [],
+  );
+
   return (
     <main
       id="axion-main"
-      className="mx-auto flex min-h-screen max-w-6xl flex-col gap-8 px-5 py-10"
+      className="axion-shell mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-10 px-4 py-10 sm:px-6 lg:px-8"
     >
-      <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+      <section className="axion-shell__header grid gap-6 xl:grid-cols-[minmax(0,0.58fr)_minmax(0,0.42fr)] xl:items-start">
         <AxionHero />
-        <div className="flex gap-2">
-          <ThemeToggle
-            value={theme}
-            onToggle={() => toggleTheme()}
-            labels={{
-              neon: t("theme.enable"),
-              retro: t("theme.retro"),
-              dark: t("theme.disable"),
-              default: t("theme.enable"),
-            }}
+        <aside className="axion-panel axion-shell__quick space-y-5 p-5">
+          <header className="space-y-2 text-left">
+            <p className="axion-shell__eyebrow text-xs uppercase tracking-[0.35em] text-[var(--ax-muted)]">
+              {workspaceCopy.quickHeading}
+            </p>
+            <p className="text-sm text-[rgba(255,255,255,0.72)]">
+              {workspaceCopy.quickDescription}
+            </p>
+          </header>
+          <div className="flex flex-wrap items-center gap-2">
+            <ThemeToggle
+              value={theme}
+              onToggle={() => toggleTheme()}
+              labels={{
+                neon: t("theme.enable"),
+                retro: t("theme.retro"),
+                dark: t("theme.disable"),
+                default: t("theme.enable"),
+              }}
+            />
+            <HelpModal
+              ref={helpRef}
+              locale={locale as Locale}
+              onLocaleChange={handleLocaleChange}
+              examples={examples}
+            />
+          </div>
+          {exampleSuggestions.length ? (
+            <div className="space-y-3">
+              <p className="axion-shell__eyebrow text-xs uppercase tracking-[0.35em] text-[var(--ax-muted)]">
+                {workspaceCopy.examplesHeading}
+              </p>
+              <div className="axion-shell__examples flex flex-wrap gap-2">
+                {exampleSuggestions.map((example) => (
+                  <button
+                    key={example}
+                    type="button"
+                    className="axion-shell__example-chip axion-button axion-button--ghost text-xs"
+                    onClick={() => handleExample(example)}
+                  >
+                    {example}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </aside>
+      </section>
 
-          />
-          <HelpModal
-            ref={helpRef}
-            locale={locale as Locale}
-            onLocaleChange={handleLocaleChange}
-            examples={examples}
-          />
-        </div>
-      </div>
-
-      <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="flex flex-col gap-6">
+      <section className="axion-shell__workspace flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:gap-8">
+        <div className="order-1 flex flex-col gap-6 xl:order-none xl:col-span-7 xl:row-start-1">
           <CalcInput
             ref={inputRef}
             value={input}
@@ -281,6 +332,13 @@ function AxionShell() {
             clearLabel={t("input.clear")}
             errorPosition={error?.position ?? null}
           />
+        </div>
+        <div className="order-2 xl:order-none xl:col-span-5 xl:row-start-1">
+          <Keypad
+            onInsert={(text, offset) => inputRef.current?.insert(text, offset)}
+          />
+        </div>
+        <div className="order-3 xl:order-none xl:col-span-7 xl:row-start-2">
           <ResultPane
             result={result}
             error={error}
@@ -288,10 +346,7 @@ function AxionShell() {
             katex={katex}
           />
         </div>
-        <div className="flex flex-col gap-6">
-          <Keypad
-            onInsert={(text, offset) => inputRef.current?.insert(text, offset)}
-          />
+        <div className="order-4 xl:order-none xl:col-span-5 xl:row-start-2">
           <HistoryPane
             entries={history.entries}
             onRestore={handleRestore}

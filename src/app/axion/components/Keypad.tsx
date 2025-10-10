@@ -160,16 +160,19 @@ export function Keypad({ onInsert }: KeypadProps) {
   );
 
   return (
-    <section aria-label={title} className="axion-panel flex flex-col gap-4 p-4">
-      <header className="flex flex-col gap-1">
-        <h2 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+    <section
+      aria-label={title}
+      className="axion-panel axion-panel--keypad flex flex-col gap-5 p-5"
+    >
+      <header className="flex flex-col gap-2">
+        <h2 className="axion-shell__eyebrow text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
           {title}
         </h2>
-        <p className="text-[10px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.35)]">
+        <p className="text-[11px] uppercase tracking-[0.25em] text-[rgba(255,255,255,0.45)]">
           {legend}
         </p>
       </header>
-      <div className="grid gap-4">
+      <div className="axion-keypad-groups grid gap-3 md:grid-cols-2 xl:grid-cols-1 xl:max-h-[460px] xl:overflow-y-auto xl:pr-1">
         {groups.map((group) => (
           <details
             key={group.id}

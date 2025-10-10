@@ -4,6 +4,11 @@
     "tagline": "Compute Beyond Logic.",
     "subtitle": "Retro-futuristische algebrarekenmachine voor exacte wiskunde."
   },
+  "workspace": {
+    "quickHeading": "Snelle acties",
+    "quickDescription": "Schakel thema's, open de help of start vanuit een voorbeeld.",
+    "examplesHeading": "Probeer een voorbeeld"
+  },
   "input": {
     "label": "Invoer",
     "placeholder": "Voer een expressie in, bijvoorbeeld sin(pi/2) + sqrt(2)^2",

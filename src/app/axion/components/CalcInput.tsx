@@ -102,15 +102,15 @@ export const CalcInput = forwardRef<Ref, CalcInputProps>(
     };
 
     return (
-      <section className="axion-panel flex flex-col gap-4 p-4">
-        <label className="flex flex-col gap-2">
-          <span className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+      <section className="axion-panel axion-panel--input flex flex-col gap-5 p-4 sm:p-5">
+        <label className="flex flex-col gap-3">
+          <span className="axion-shell__eyebrow text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
             {label}
           </span>
           <div className="relative">
             <pre
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 whitespace-pre-wrap break-words rounded-lg bg-black/40 px-3 py-2 font-mono text-base text-[rgba(255,255,255,0.45)]"
+              className="pointer-events-none absolute inset-0 whitespace-pre-wrap break-words rounded-xl bg-[rgba(6,10,18,0.68)] px-4 py-3 font-mono text-base leading-6 text-[rgba(255,255,255,0.45)] sm:text-lg sm:leading-7"
             >
               {segments.map((segment, index) => (
                 <span key={`${segment.start}-${index}`} className={segment.className}>
@@ -126,21 +126,21 @@ export const CalcInput = forwardRef<Ref, CalcInputProps>(
               placeholder={placeholder}
               spellCheck={false}
               aria-label={label}
-              className="relative min-h-[160px] w-full resize-y rounded-lg border border-transparent bg-transparent px-3 py-2 font-mono text-base text-[var(--ax-text)] focus-visible:border-[rgba(0,255,242,0.6)] focus-visible:outline-none"
+              className="relative min-h-[200px] w-full resize-y rounded-xl border border-transparent bg-transparent px-4 py-3 font-mono text-base leading-6 text-[var(--ax-text)] focus-visible:border-[rgba(0,255,242,0.6)] focus-visible:outline-none sm:min-h-[240px] sm:text-lg sm:leading-7"
             />
           </div>
         </label>
         <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
-            className="axion-button"
+            className="axion-button axion-button--primary"
             onClick={() => onShortcut("evaluate")}
           >
             {evaluateLabel}
           </button>
           <button
             type="button"
-            className="axion-button"
+            className="axion-button axion-button--ghost"
             onClick={() => onShortcut("clear")}
           >
             {clearLabel}
