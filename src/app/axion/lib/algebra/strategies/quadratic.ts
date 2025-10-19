@@ -349,13 +349,23 @@ function buildPlotConfig(
   realRoots: number[],
   { a, b, c }: { readonly a: number; readonly b: number; readonly c: number },
 ): PlotConfig {
+  const label = `f(${variable}) = ${formatPolynomial(a, b, c, variable)}`;
   return {
-    type: "function",
+    type: "cartesian",
     variable,
     expression,
     domain: estimateDomain(realRoots),
     samples: 200,
-    label: `f(${variable}) = ${formatPolynomial(a, b, c, variable)}`,
+    label,
+    axes: {
+      x: { label: variable },
+      y: { label: "f(x)" },
+    },
+    annotations: realRoots.map((root) => ({
+      type: "point",
+      coordinates: [root, 0],
+      label: `${variable} = ${formatNumber(root)}`,
+    })),
   };
 }
 

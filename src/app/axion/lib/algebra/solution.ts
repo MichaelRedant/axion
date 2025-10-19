@@ -9,14 +9,69 @@ export interface SolutionStep {
   readonly expression?: string;
 }
 
-export interface PlotConfig {
-  readonly type: "function";
+export interface PlotAxisConfig {
   readonly label?: string;
+  readonly min?: number;
+  readonly max?: number;
+  readonly ticks?: number;
+}
+
+export interface PlotAnnotation {
+  readonly type: "point" | "line" | "text";
+  readonly coordinates: number[];
+  readonly label?: string;
+}
+
+interface PlotBaseConfig {
+  readonly label?: string;
+  readonly axes?: {
+    readonly x?: PlotAxisConfig;
+    readonly y?: PlotAxisConfig;
+    readonly z?: PlotAxisConfig;
+  };
+  readonly annotations?: PlotAnnotation[];
+}
+
+export interface CartesianPlotConfig extends PlotBaseConfig {
+  readonly type: "cartesian";
   readonly variable: string;
   readonly expression: Node;
   readonly domain: [number, number];
   readonly samples: number;
 }
+
+export interface ParametricPlotConfig extends PlotBaseConfig {
+  readonly type: "parametric";
+  readonly parameter: string;
+  readonly range: [number, number];
+  readonly samples: number;
+  readonly xExpression: Node;
+  readonly yExpression: Node;
+}
+
+export interface ImplicitPlotConfig extends PlotBaseConfig {
+  readonly type: "implicit";
+  readonly expression: Node;
+  readonly variables: [string, string];
+  readonly xRange: [number, number];
+  readonly yRange: [number, number];
+  readonly resolution: number;
+}
+
+export interface SurfacePlotConfig extends PlotBaseConfig {
+  readonly type: "surface";
+  readonly expression: Node;
+  readonly variables: [string, string, string];
+  readonly xRange: [number, number];
+  readonly yRange: [number, number];
+  readonly resolution: number;
+}
+
+export type PlotConfig =
+  | CartesianPlotConfig
+  | ParametricPlotConfig
+  | ImplicitPlotConfig
+  | SurfacePlotConfig;
 
 export interface ComplexValue {
   readonly real: number;
