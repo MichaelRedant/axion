@@ -17,6 +17,7 @@ import {
 import type { ShortcutAction } from "./lib/utils/keyboard";
 import { NotebookPane } from "./components/NotebookPane";
 import { useNotebook } from "./lib/notebook/useNotebook";
+import type { NotebookCell } from "./lib/notebook/types";
 import { exportNotebookToMarkdown } from "./lib/notebook/export";
 import "./styles.css";
 
@@ -46,6 +47,7 @@ function AxionShell() {
   const [notebook, notebookActions] = useNotebook();
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
+  const editingCellIdRef = useRef<string | null>(null);
   const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
   const [theme, setThemeState] = useState("neon");
 
@@ -86,10 +88,17 @@ function AxionShell() {
     if (!input.trim()) {
       setResult(null);
       setError({ ok: false, message: t("errors.empty"), position: 0 });
+      editingCellIdRef.current = null;
       return;
     }
 
     const evaluation = analyzeExpression(input);
+
+    const editingCellId = editingCellIdRef.current;
+    if (editingCellId) {
+      notebookActions.replaceInput(editingCellId, input);
+      editingCellIdRef.current = null;
+    }
 
     if (evaluation.ok) {
       setResult(evaluation);
@@ -101,7 +110,7 @@ function AxionShell() {
       setError(evaluation);
       notebookActions.appendError(input, evaluation);
     }
-  }, [input, notebookActions, t]);
+  }, [editingCellIdRef, input, notebookActions, t]);
 
   const navigateHistory = useCallback(
     (direction: HistoryDirection) => {
@@ -111,6 +120,8 @@ function AxionShell() {
       if (!navigable.length) return;
 
       let cursor = historyCursorRef.current;
+
+      editingCellIdRef.current = null;
 
       if (direction === "prev") {
         if (cursor === null) {
@@ -144,7 +155,7 @@ function AxionShell() {
       historyCursorRef.current = cursor;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [input, notebook.cells],
+    [editingCellIdRef, input, notebook.cells],
   );
 
   const toggleTheme = useCallback(
@@ -169,6 +180,7 @@ function AxionShell() {
           setResult(null);
           setError(null);
           historyCursorRef.current = null;
+          editingCellIdRef.current = null;
           break;
         case "historyPrev":
           navigateHistory("prev");
@@ -186,20 +198,38 @@ function AxionShell() {
           break;
       }
     },
-    [evaluateExpression, navigateHistory, toggleTheme],
+    [editingCellIdRef, evaluateExpression, navigateHistory, toggleTheme],
   );
 
-  const handleRestore = useCallback(
-    (id: string) => {
-      const cell = notebook.cells.find((item) => item.id === id);
-      if (!cell) return;
+  const loadCellIntoInput = useCallback(
+    (cell: NotebookCell) => {
       setInput(cell.input);
       setResult(null);
       setError(null);
       historyCursorRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [notebook.cells],
+    [],
+  );
+
+  const handleRestore = useCallback(
+    (id: string) => {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) return;
+      editingCellIdRef.current = null;
+      loadCellIntoInput(cell);
+    },
+    [editingCellIdRef, loadCellIntoInput, notebook.cells],
+  );
+
+  const handleDuplicateAndEdit = useCallback(
+    (id: string) => {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) return;
+      editingCellIdRef.current = id;
+      loadCellIntoInput(cell);
+    },
+    [editingCellIdRef, loadCellIntoInput, notebook.cells],
   );
 
   const handleCopy = useCallback(
@@ -277,13 +307,14 @@ function AxionShell() {
 
   const handleExample = useCallback(
     (example: string) => {
+      editingCellIdRef.current = null;
       setInput(example);
       setResult(null);
       setError(null);
       historyCursorRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [],
+    [editingCellIdRef],
   );
 
   return (
@@ -376,6 +407,7 @@ function AxionShell() {
           <NotebookPane
             cells={notebook.cells}
             onRestore={handleRestore}
+            onDuplicateAndEdit={handleDuplicateAndEdit}
             onCopy={handleCopy}
             onTogglePin={handlePin}
             onRemove={handleRemove}
