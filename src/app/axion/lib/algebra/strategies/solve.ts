@@ -12,7 +12,14 @@ import {
   extractPolynomial,
   type Polynomial,
 } from "../simplify";
-import type { CartesianPlotConfig, PlotAnnotation, PlotConfig, SolutionInterval, SolutionStep } from "../solution";
+import type {
+  CartesianPlotConfig,
+  PlotAnnotation,
+  PlotConfig,
+  SolutionInterval,
+  SolutionStep,
+  SolutionRationale,
+} from "../solution";
 
 export const SOLVE_STRATEGY_DESCRIPTOR: StrategyDescriptor = {
   id: "strategy.solve",
@@ -32,7 +39,7 @@ interface SolveResult {
   readonly exact: string;
   readonly roots: Array<number | ComplexRoot>;
   readonly steps: SolutionStep[];
-  readonly rationale: string;
+  readonly rationale: SolutionRationale;
   readonly intervals?: SolutionInterval[];
 }
 

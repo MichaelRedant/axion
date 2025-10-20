@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { analyzeExpression } from "@/app/axion/lib/algebra/engine";
+import type { SolutionRationale } from "@/app/axion/lib/algebra/solution";
 
 function normalizeLatex(latex: string | undefined) {
   return latex ? latex.replace(/\s+/g, "") : "";
@@ -31,7 +32,9 @@ describe("solve strategy", () => {
     if (!result.ok) return;
     expect(result.solution.details?.degree).toBe(2);
     expect(result.solution.steps).toHaveLength(3);
-    expect(result.solution.rationale?.toLowerCase()).toContain("complex");
+    expect(getRationaleText(result.solution.rationale).toLowerCase()).toContain(
+      "complex",
+    );
     const roots = result.solution.roots ?? [];
     expect(roots).toHaveLength(2);
     const formattedRoots = roots.map((root) =>
@@ -80,3 +83,63 @@ describe("solve strategy", () => {
     expect(roots.filter((root) => typeof root === "number")).toHaveLength(4);
   });
 });
+
+function getRationaleText(rationale: SolutionRationale | undefined): string {
+  if (!rationale) {
+    return "";
+  }
+  if (typeof rationale === "string") {
+    return rationale;
+  }
+
+  const summary = firstNonEmptyString([
+    rationale.summary,
+    rationale.method,
+    rationale.strategy,
+    rationale.approach,
+  ]);
+  if (summary) {
+    return summary;
+  }
+
+  const notes = rationale.notes ?? rationale.insights ?? rationale.takeaways;
+  if (Array.isArray(notes) && notes.length > 0) {
+    return notes[0] ?? "";
+  }
+
+  const details = rationale.details;
+  if (typeof details === "string") {
+    return details;
+  }
+  if (Array.isArray(details) && details.length > 0) {
+    const first = details[0];
+    if (typeof first === "string") {
+      return first;
+    }
+    if (first && typeof first === "object") {
+      const text =
+        "description" in first && typeof first.description === "string"
+          ? first.description
+          : "body" in first && typeof first.body === "string"
+            ? first.body
+            : undefined;
+      if (text) {
+        return text;
+      }
+    }
+  }
+
+  return "";
+}
+
+function firstNonEmptyString(values: ReadonlyArray<unknown>): string | undefined {
+  for (const value of values) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+  return undefined;
+}

@@ -92,6 +92,46 @@ export interface SolutionInterval {
   readonly description?: string;
 }
 
+export interface SolutionRationaleDetail {
+  readonly title?: string;
+  readonly description?: string;
+  readonly bullets?: readonly string[];
+}
+
+export interface SolutionRationaleMap {
+  readonly summary?: string;
+  readonly method?: string;
+  readonly strategy?: string;
+  readonly approach?: string;
+  readonly validWhen?: string;
+  readonly domain?: string;
+  readonly caution?: string;
+  readonly caveats?: string;
+  readonly warning?: string;
+  readonly notes?: readonly string[];
+  readonly insights?: readonly string[];
+  readonly takeaways?: readonly string[];
+  readonly highlights?: readonly string[];
+  readonly details?:
+    | string
+    | readonly SolutionRationaleDetail[]
+    | SolutionRationaleDetail
+    | readonly string[];
+  readonly cases?:
+    | string
+    | readonly SolutionRationaleDetail[]
+    | SolutionRationaleDetail
+    | readonly string[];
+  readonly explanations?:
+    | string
+    | readonly SolutionRationaleDetail[]
+    | SolutionRationaleDetail
+    | readonly string[];
+  readonly [key: string]: unknown;
+}
+
+export type SolutionRationale = string | SolutionRationaleMap;
+
 export interface SolutionBundle {
   readonly type: ProblemType;
   readonly descriptor: ProblemDescriptor;
@@ -99,7 +139,7 @@ export interface SolutionBundle {
   readonly approx: string | null;
   readonly approxValue?: number | null;
   readonly steps: SolutionStep[];
-  readonly rationale?: string;
+  readonly rationale?: SolutionRationale;
   readonly plotConfig?: PlotConfig | null;
   readonly details?: Record<string, unknown>;
   readonly roots?: Array<number | ComplexValue>;

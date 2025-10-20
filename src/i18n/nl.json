@@ -24,7 +24,14 @@
     "explainButton": "Explain modus",
     "followUps": "Verdiepingsvragen",
     "followUpHint": "Spring naar de juiste stap voor extra context.",
-    "intervals": "Intervallen"
+    "intervals": "Intervallen",
+    "openExplain": "Open Explain",
+    "rationaleHeading": "Waarom dit werkt",
+    "rationaleMethod": "Methode",
+    "rationaleValidWhen": "Geldig wanneer",
+    "rationaleCaution": "Let op",
+    "rationaleNotes": "Belangrijkste punten",
+    "rationaleMore": "Meer uitleg vind je in de Explain-modus."
   },
   "history": {
     "title": "Historiek",

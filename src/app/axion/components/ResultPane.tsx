@@ -3,6 +3,10 @@
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
+import type {
+  SolutionRationale,
+  SolutionRationaleMap,
+} from "../lib/algebra/solution";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
 import { PlotPanel } from "./plots/PlotPanel";
@@ -42,6 +46,22 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
   const followUps = useMemo(() => result?.solution.followUps ?? [], [result]);
   const intervals = useMemo(() => result?.solution.intervals ?? [], [result]);
+
+  const normalizedRationale = useMemo(
+    () => normalizeRationale(result?.solution.rationale),
+    [result?.solution.rationale],
+  );
+
+  const showRationalePreview = Boolean(
+    normalizedRationale &&
+      (normalizedRationale.summary ||
+        normalizedRationale.method ||
+        normalizedRationale.validWhen ||
+        normalizedRationale.caution ||
+        normalizedRationale.notes.length > 0),
+  );
+
+  const hasRationaleDetails = Boolean(normalizedRationale?.details.length);
 
   const hasApprox = Boolean(result?.solution.approx);
   const hasSteps = Boolean(result?.solution.steps.length);
@@ -147,6 +167,74 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                   </div>
                 ) : null}
               </div>
+              {showRationalePreview && normalizedRationale ? (
+                <div className="border-t border-[rgba(0,255,242,0.15)] pt-4">
+                  <div className="flex flex-col gap-3 text-sm text-[rgba(255,255,255,0.75)] md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-3 md:max-w-3xl">
+                      <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                        {t("result.rationaleHeading", "Why this works")}
+                      </p>
+                      {normalizedRationale.summary ? (
+                        <p className="text-base text-[var(--ax-text)]">
+                          {normalizedRationale.summary}
+                        </p>
+                      ) : null}
+                      {normalizedRationale.method ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                            {t("result.rationaleMethod", "Method")}
+                          </p>
+                          <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.method}</p>
+                        </div>
+                      ) : null}
+                      {normalizedRationale.validWhen ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                            {t("result.rationaleValidWhen", "Valid when")}
+                          </p>
+                          <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.validWhen}</p>
+                        </div>
+                      ) : null}
+                      {normalizedRationale.notes.length ? (
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                            {t("result.rationaleNotes", "Key takeaways")}
+                          </p>
+                          <ul className="mt-1 list-disc space-y-1 pl-5">
+                            {normalizedRationale.notes.map((note, index) => (
+                              <li key={`rationale-note-${index}`} className="text-[var(--ax-text)]">
+                                {note}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {normalizedRationale.caution ? (
+                        <div className="rounded-md border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.08)] p-3">
+                          <p className="text-xs uppercase tracking-[0.3em] text-amber-200">
+                            {t("result.rationaleCaution", "Caution")}
+                          </p>
+                          <p className="mt-1 text-sm text-amber-100">{normalizedRationale.caution}</p>
+                        </div>
+                      ) : null}
+                    </div>
+                    {hasRationaleDetails && hasExplain ? (
+                      <button
+                        type="button"
+                        className="axion-button axion-button--ghost self-start text-xs"
+                        onClick={() => setActiveTab("explain")}
+                      >
+                        {t("result.openExplain", "Open Explain")}
+                      </button>
+                    ) : null}
+                  </div>
+                  {hasRationaleDetails && hasExplain ? (
+                    <p className="mt-2 text-xs text-[rgba(255,255,255,0.55)]">
+                      {t("result.rationaleMore", "More detail lives in Explain mode.")}
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               {result.solution.plotConfig ? <PlotPanel config={result.solution.plotConfig} /> : null}
             </div>
           ) : null}
@@ -214,8 +302,77 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                   </div>
                 </div>
               ) : null}
-              {result.solution.rationale ? (
-                <p className="text-sm text-[rgba(255,255,255,0.75)]">{result.solution.rationale}</p>
+              {normalizedRationale ? (
+                <>
+                  <div className="space-y-3 text-sm text-[rgba(255,255,255,0.75)]">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                      {t("result.rationaleHeading", "Why this works")}
+                    </p>
+                    {normalizedRationale.summary ? (
+                      <p className="text-base text-[var(--ax-text)]">{normalizedRationale.summary}</p>
+                    ) : null}
+                    {normalizedRationale.method ? (
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                          {t("result.rationaleMethod", "Method")}
+                        </p>
+                        <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.method}</p>
+                      </div>
+                    ) : null}
+                    {normalizedRationale.validWhen ? (
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                          {t("result.rationaleValidWhen", "Valid when")}
+                        </p>
+                        <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.validWhen}</p>
+                      </div>
+                    ) : null}
+                    {normalizedRationale.notes.length ? (
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                          {t("result.rationaleNotes", "Key takeaways")}
+                        </p>
+                        <ul className="mt-1 list-disc space-y-1 pl-5 text-[var(--ax-text)]">
+                          {normalizedRationale.notes.map((note, index) => (
+                            <li key={`explain-rationale-note-${index}`}>{note}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {normalizedRationale.caution ? (
+                      <div className="rounded-md border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.08)] p-3">
+                        <p className="text-xs uppercase tracking-[0.3em] text-amber-200">
+                          {t("result.rationaleCaution", "Caution")}
+                        </p>
+                        <p className="mt-1 text-sm text-amber-100">{normalizedRationale.caution}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                  {normalizedRationale.details.map((detail, index) => (
+                    <div
+                      key={`rationale-detail-${index}`}
+                      className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4 text-sm text-[rgba(255,255,255,0.75)]"
+                    >
+                      {detail.title ? (
+                        <h5 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                          {detail.title}
+                        </h5>
+                      ) : null}
+                      {detail.description ? (
+                        <p className={clsx("text-[var(--ax-text)]", detail.title ? "mt-2" : undefined)}>
+                          {detail.description}
+                        </p>
+                      ) : null}
+                      {detail.bullets?.length ? (
+                        <ul className="mt-2 list-disc space-y-1 pl-5 text-[var(--ax-text)]">
+                          {detail.bullets.map((item, bulletIndex) => (
+                            <li key={`rationale-detail-${index}-bullet-${bulletIndex}`}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ))}
+                </>
               ) : null}
               {detailEntries.length ? (
                 <dl className="grid gap-2 text-sm">
@@ -312,19 +469,300 @@ function hasExplainContent(result: EvaluationSuccess | null): boolean {
     return false;
   }
 
-  const {
-    rationale,
-    details,
-    roots,
-    followUps,
-    intervals,
-  } = result.solution;
+  const { rationale, details, roots, followUps, intervals } = result.solution;
+  const normalized = normalizeRationale(rationale);
+  const hasExtendedRationale = Boolean(normalized?.details.length);
 
-  return Boolean(
-    rationale ||
-      (details && Object.keys(details).length > 0) ||
-      roots?.length ||
-      followUps?.length ||
-      intervals?.length,
+  return (
+    hasExtendedRationale ||
+    Boolean(details && Object.keys(details).length > 0) ||
+    Boolean(roots?.length) ||
+    Boolean(followUps?.length) ||
+    Boolean(intervals?.length)
   );
+}
+
+interface NormalizedRationaleDetail {
+  readonly title?: string;
+  readonly description?: string;
+  readonly bullets?: readonly string[];
+}
+
+interface NormalizedRationale {
+  readonly summary?: string;
+  readonly method?: string;
+  readonly validWhen?: string;
+  readonly caution?: string;
+  readonly notes: readonly string[];
+  readonly details: readonly NormalizedRationaleDetail[];
+}
+
+function normalizeRationale(
+  rationale: SolutionRationale | undefined,
+): NormalizedRationale | null {
+  if (!rationale) {
+    return null;
+  }
+
+  if (typeof rationale === "string") {
+    const summary = rationale.trim();
+    return {
+      summary: summary || undefined,
+      method: undefined,
+      validWhen: undefined,
+      caution: undefined,
+      notes: [],
+      details: [],
+    };
+  }
+
+  if (!isRationaleMap(rationale)) {
+    return null;
+  }
+
+  const handledKeys = new Set<string>();
+
+  const summary = takeStringValue(rationale, handledKeys, [
+    "summary",
+    "overview",
+    "description",
+    "quickTake",
+  ]);
+
+  const method = takeStringValue(rationale, handledKeys, [
+    "method",
+    "strategy",
+    "approach",
+  ]);
+
+  const validWhen = takeStringValue(rationale, handledKeys, [
+    "validWhen",
+    "domain",
+    "conditions",
+    "holdsWhen",
+    "applicableWhen",
+  ]);
+
+  const caution = takeStringValue(rationale, handledKeys, [
+    "caution",
+    "caveats",
+    "warning",
+    "warnings",
+  ]);
+
+  const notes = collectStringList(rationale, handledKeys, [
+    "notes",
+    "insights",
+    "takeaways",
+    "highlights",
+    "keyPoints",
+  ]);
+
+  const details: NormalizedRationaleDetail[] = [];
+  for (const key of ["details", "cases", "explanations"]) {
+    if (key in rationale) {
+      handledKeys.add(key);
+      details.push(...normalizeDetailValue(rationale[key], formatLabel(key)));
+    }
+  }
+
+  for (const [key, value] of Object.entries(rationale)) {
+    if (handledKeys.has(key)) {
+      continue;
+    }
+    const normalizedDetails = normalizeDetailValue(value, formatLabel(key));
+    if (normalizedDetails.length) {
+      details.push(...normalizedDetails);
+    }
+  }
+
+  return {
+    summary,
+    method,
+    validWhen,
+    caution,
+    notes,
+    details,
+  };
+}
+
+function isRationaleMap(value: SolutionRationale): value is SolutionRationaleMap {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function takeStringValue(
+  source: SolutionRationaleMap,
+  handledKeys: Set<string>,
+  keys: readonly string[],
+): string | undefined {
+  for (const key of keys) {
+    const candidate = source[key];
+    const normalized = toSingleString(candidate);
+    if (normalized) {
+      handledKeys.add(key);
+      return normalized;
+    }
+  }
+  return undefined;
+}
+
+function collectStringList(
+  source: SolutionRationaleMap,
+  handledKeys: Set<string>,
+  keys: readonly string[],
+): string[] {
+  const list: string[] = [];
+  for (const key of keys) {
+    const candidate = source[key];
+    const entries = toStringArray(candidate);
+    if (entries.length) {
+      handledKeys.add(key);
+      list.push(...entries);
+    }
+  }
+  return list;
+}
+
+function normalizeDetailValue(
+  value: unknown,
+  fallbackTitle?: string,
+): NormalizedRationaleDetail[] {
+  if (!value) {
+    return [];
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return [];
+    }
+    return [
+      {
+        title: fallbackTitle,
+        description: trimmed,
+      },
+    ];
+  }
+
+  if (Array.isArray(value)) {
+    const normalized: NormalizedRationaleDetail[] = [];
+    const bullets: string[] = [];
+    for (const entry of value) {
+      if (typeof entry === "string") {
+        const trimmed = entry.trim();
+        if (trimmed) {
+          bullets.push(trimmed);
+        }
+        continue;
+      }
+      if (entry && typeof entry === "object") {
+        normalized.push(...normalizeDetailValue(entry, fallbackTitle));
+      }
+    }
+    if (bullets.length) {
+      normalized.push({ title: fallbackTitle, bullets });
+    }
+    return normalized;
+  }
+
+  if (typeof value === "object") {
+    const detail = value as Record<string, unknown>;
+    const title =
+      toSingleString(detail.title) ??
+      toSingleString(detail.heading) ??
+      toSingleString(detail.label) ??
+      fallbackTitle;
+    const description =
+      toSingleString(detail.description) ??
+      toSingleString(detail.body) ??
+      toSingleString(detail.text) ??
+      toSingleString(detail.summary);
+    const bullets = toStringArray(
+      detail.bullets ??
+        detail.items ??
+        detail.points ??
+        detail.steps ??
+        detail.lines,
+    );
+
+    const normalized: NormalizedRationaleDetail[] = [];
+    const base: NormalizedRationaleDetail = {};
+    if (title) {
+      base.title = title;
+    }
+    if (description) {
+      base.description = description;
+    }
+    if (bullets.length) {
+      base.bullets = bullets;
+    }
+    if (Object.keys(base).length > 0) {
+      normalized.push(base);
+    }
+
+    if (detail.details) {
+      normalized.push(
+        ...normalizeDetailValue(detail.details, title ?? fallbackTitle),
+      );
+    }
+    if (detail.explanations) {
+      normalized.push(
+        ...normalizeDetailValue(detail.explanations, title ?? fallbackTitle),
+      );
+    }
+
+    return normalized;
+  }
+
+  return [];
+}
+
+function toSingleString(value: unknown): string | undefined {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || undefined;
+  }
+  if (Array.isArray(value)) {
+    const joined = value
+      .map((entry) => (typeof entry === "string" ? entry.trim() : ""))
+      .filter(Boolean)
+      .join(" ");
+    const trimmed = joined.trim();
+    return trimmed || undefined;
+  }
+  return undefined;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      return trimmed ? [trimmed] : [];
+    }
+    return [];
+  }
+  const list: string[] = [];
+  for (const entry of value) {
+    if (typeof entry === "string") {
+      const trimmed = entry.trim();
+      if (trimmed) {
+        list.push(trimmed);
+      }
+    }
+  }
+  return list;
+}
+
+function formatLabel(key: string): string {
+  if (!key) {
+    return "";
+  }
+  const spaced = key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/[_-]+/g, " ")
+    .trim();
+  if (!spaced) {
+    return "";
+  }
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
