@@ -72,7 +72,8 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   const hasRationaleDetails = Boolean(normalizedRationale?.details.length);
 
   const hasApprox = Boolean(result?.solution.approx);
-  const hasSteps = Boolean(result?.solution.steps.length);
+  const stepCount = result?.solution?.steps?.length ?? 0;
+  const hasSteps = stepCount > 0;
   const hasExplainExtras = useMemo(() => hasExplainContent(result), [result]);
   const explainTabEnabled = Boolean(result);
 
