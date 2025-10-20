@@ -142,14 +142,24 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
             </span>
           ) : null}
           {result ? (
-            <button
-              type="button"
-              className="axion-button axion-button--ghost text-xs"
-              onClick={() => explainTabEnabled && setActiveTab("explain")}
-              disabled={!explainTabEnabled}
-            >
-              {t("result.explainButton")}
-            </button>
+            <>
+              <button
+                type="button"
+                className="axion-button axion-button--ghost text-xs"
+                onClick={() => hasSteps && setActiveTab("steps")}
+                disabled={!hasSteps}
+              >
+                {t("result.stepsButton", "Show steps")}
+              </button>
+              <button
+                type="button"
+                className="axion-button axion-button--ghost text-xs"
+                onClick={() => explainTabEnabled && setActiveTab("explain")}
+                disabled={!explainTabEnabled}
+              >
+                {t("result.explainButton")}
+              </button>
+            </>
           ) : null}
         </div>
       </header>
