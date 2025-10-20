@@ -7,6 +7,7 @@ import type {
   NotebookCell,
   NotebookCellErrorOutput,
   NotebookCellSuccessOutput,
+  NotebookCellType,
   NotebookState,
 } from "./types";
 
@@ -15,6 +16,7 @@ interface CreateCellAction {
   readonly id: string;
   readonly afterId?: string | null;
   readonly input: string;
+  readonly cellType: NotebookCellType;
   readonly timestamp: number;
 }
 
@@ -93,32 +95,52 @@ function notebookReducer(state: NotebookState, action: NotebookAction): Notebook
     case "updateInput":
       return updateCellInput(state, action);
     case "markEvaluating":
-      return updateCell(state, action.id, (cell) => ({
-        ...cell,
-        status: "running",
-        updatedAt: action.timestamp,
-      }));
+      return updateCell(state, action.id, (cell) => {
+        if (cell.type !== "math") {
+          return cell;
+        }
+        return {
+          ...cell,
+          status: "running",
+          updatedAt: action.timestamp,
+        } satisfies NotebookCell;
+      });
     case "setSuccess":
-      return updateCell(state, action.id, (cell) => ({
-        ...cell,
-        status: "success",
-        updatedAt: action.timestamp,
-        output: { type: "success", evaluation: action.evaluation } satisfies NotebookCellSuccessOutput,
-      }));
+      return updateCell(state, action.id, (cell) => {
+        if (cell.type !== "math") {
+          return cell;
+        }
+        return {
+          ...cell,
+          status: "success",
+          updatedAt: action.timestamp,
+          output: { type: "success", evaluation: action.evaluation } satisfies NotebookCellSuccessOutput,
+        } satisfies NotebookCell;
+      });
     case "setError":
-      return updateCell(state, action.id, (cell) => ({
-        ...cell,
-        status: "error",
-        updatedAt: action.timestamp,
-        output: { type: "error", error: action.error } satisfies NotebookCellErrorOutput,
-      }));
+      return updateCell(state, action.id, (cell) => {
+        if (cell.type !== "math") {
+          return cell;
+        }
+        return {
+          ...cell,
+          status: "error",
+          updatedAt: action.timestamp,
+          output: { type: "error", error: action.error } satisfies NotebookCellErrorOutput,
+        } satisfies NotebookCell;
+      });
     case "clearOutput":
-      return updateCell(state, action.id, (cell) => ({
-        ...cell,
-        status: "idle",
-        updatedAt: action.timestamp,
-        output: null,
-      }));
+      return updateCell(state, action.id, (cell) => {
+        if (cell.type !== "math") {
+          return cell;
+        }
+        return {
+          ...cell,
+          status: "idle",
+          updatedAt: action.timestamp,
+          output: null,
+        } satisfies NotebookCell;
+      });
     case "remove":
       return removeCell(state, action.id);
     case "select":
@@ -150,6 +172,7 @@ function createCell(state: NotebookState, action: CreateCellAction): NotebookSta
 
   const nextCell: NotebookCell = {
     id: action.id,
+    type: action.cellType,
     input: action.input,
     createdAt: action.timestamp,
     updatedAt: action.timestamp,
@@ -252,6 +275,7 @@ export function useNotebook(): [NotebookState, NotebookActions] {
           id,
           afterId: options?.afterId ?? null,
           input: options?.input ?? "",
+          cellType: options?.type ?? "math",
           timestamp,
         });
         return id;

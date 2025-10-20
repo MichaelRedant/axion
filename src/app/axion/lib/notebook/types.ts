@@ -2,9 +2,12 @@ import type { EvaluationFailure, EvaluationSuccess } from "../algebra/engine";
 
 export type NotebookCellStatus = "idle" | "running" | "success" | "error";
 
+export type NotebookCellType = "math" | "text";
+
 export interface NotebookCell {
   readonly id: string;
   readonly order: number;
+  readonly type: NotebookCellType;
   readonly input: string;
   readonly createdAt: number;
   readonly updatedAt: number;
@@ -44,7 +47,7 @@ export type NotebookSerializedOutput =
   | NotebookCellErrorOutput;
 
 export interface NotebookActions {
-  readonly createCell: (options?: { afterId?: string | null; input?: string }) => string;
+  readonly createCell: (options?: { afterId?: string | null; input?: string; type?: NotebookCellType }) => string;
   readonly updateInput: (id: string, nextInput: string) => void;
   readonly markEvaluating: (id: string) => void;
   readonly setSuccess: (id: string, evaluation: EvaluationSuccess) => void;

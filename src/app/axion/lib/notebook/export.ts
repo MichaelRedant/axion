@@ -8,9 +8,22 @@ export async function exportNotebookToMarkdown(cells: NotebookCell[]) {
   lines.push("");
 
   for (const [index, cell] of cells.entries()) {
-    const heading = `## Cell ${index + 1}`;
+    const heading = `## Cell ${index + 1} (${cell.type === "text" ? "Text" : "Math"})`;
     lines.push(heading);
     lines.push("");
+
+    if (cell.type === "text") {
+      lines.push("**Content:**");
+      lines.push("");
+      if (cell.input.trim()) {
+        lines.push(cell.input);
+      } else {
+        lines.push("_(empty text cell)_");
+      }
+      lines.push("");
+      continue;
+    }
+
     lines.push(`**Input:** \`${cell.input}\``);
     lines.push("");
 

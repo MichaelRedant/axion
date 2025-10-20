@@ -89,6 +89,10 @@ function AxionShell() {
         return;
       }
 
+      if (cell.type !== "math") {
+        return;
+      }
+
       const trimmed = cell.input.trim();
       if (!trimmed) {
         notebookActions.setError(id, { ok: false, message: t("errors.empty"), position: 0 });
@@ -231,6 +235,7 @@ function AxionShell() {
             onChangeInput={(id, value) => notebookActions.updateInput(id, value)}
             onEvaluate={evaluateCell}
             onRemove={(id) => notebookActions.remove(id)}
+            onReorder={(id, targetOrder) => notebookActions.reorder(id, targetOrder)}
             onActiveInputChange={handleActiveInputChange}
           />
         </div>
