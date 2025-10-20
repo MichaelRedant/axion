@@ -10,6 +10,7 @@ import {
 import clsx from "clsx";
 import type { ShortcutAction } from "../lib/utils/keyboard";
 import { matchShortcut } from "../lib/utils/keyboard";
+import { MAXIMA_COMMANDS } from "../lib/algebra/maxima/commands";
 import { tokenize, type Token } from "../lib/algebra/tokenizer";
 import "../styles.css";
 
@@ -36,8 +37,13 @@ type Segment = {
   readonly end: number;
 };
 
-const FUNCTION_SET = new Set(["sin", "cos", "tan", "log", "ln", "sqrt"]);
-const CONSTANT_SET = new Set(["pi", "e"]);
+const FUNCTION_SET = new Set<string>([
+  ...MAXIMA_COMMANDS,
+  "fact",
+  "partialfraction",
+  "partialFraction",
+]);
+const CONSTANT_SET = new Set(["pi", "e", "phi"]);
 
 type Ref = CalcInputHandle;
 
@@ -210,15 +216,24 @@ function classForToken(token: Token): string {
     case "number":
       return "text-amber-300";
     case "identifier":
+      if (FUNCTION_SET.has(token.value.toLowerCase())) return "text-neon";
       if (FUNCTION_SET.has(token.value)) return "text-neon";
+      if (CONSTANT_SET.has(token.value.toLowerCase())) return "text-violet";
       if (CONSTANT_SET.has(token.value)) return "text-violet";
       return "text-[rgba(255,255,255,0.75)]";
     case "operator":
       return "text-violet";
     case "leftParen":
     case "rightParen":
+    case "leftBracket":
+    case "rightBracket":
+    case "leftBrace":
+    case "rightBrace":
     case "comma":
+    case "semicolon":
       return "text-[rgba(255,255,255,0.45)]";
+    case "string":
+      return "text-[#ff9a8b]";
     default:
       return "text-[rgba(255,255,255,0.45)]";
   }

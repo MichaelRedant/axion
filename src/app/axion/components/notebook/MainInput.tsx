@@ -7,6 +7,7 @@ import React, {
   useMemo,
   useRef,
 } from "react";
+import { MAXIMA_COMMANDS } from "../../lib/algebra/maxima/commands";
 import { tokenize, type Token } from "../../lib/algebra/tokenizer";
 
 export interface MainInputHandle {
@@ -31,6 +32,14 @@ type Segment = {
   readonly start: number;
   readonly end: number;
 };
+
+const FUNCTION_SET = new Set<string>([
+  ...MAXIMA_COMMANDS,
+  "fact",
+  "partialfraction",
+  "partialFraction",
+]);
+const CONSTANT_SET = new Set(["pi", "e", "phi"]);
 
 type Ref = MainInputHandle;
 
@@ -179,16 +188,29 @@ function buildSegments(source: string, errorPosition?: number): Segment[] {
 
 function classForToken(token: Token): string {
   switch (token.type) {
-    case "Number":
-    case "Constant":
+    case "number":
       return "text-[#55f2ff]";
-    case "Function":
-      return "text-[#f2c94c]";
-    case "Operator":
-    case "Punctuation":
-      return "text-[rgba(255,255,255,0.75)]";
-    case "Identifier":
+    case "identifier":
+      if (FUNCTION_SET.has(token.value.toLowerCase()) || FUNCTION_SET.has(token.value)) {
+        return "text-[#f2c94c]";
+      }
+      if (CONSTANT_SET.has(token.value.toLowerCase()) || CONSTANT_SET.has(token.value)) {
+        return "text-[#55f2ff]";
+      }
       return "text-[#9dffb0]";
+    case "operator":
+      return "text-[rgba(255,255,255,0.75)]";
+    case "leftParen":
+    case "rightParen":
+    case "leftBracket":
+    case "rightBracket":
+    case "leftBrace":
+    case "rightBrace":
+    case "comma":
+    case "semicolon":
+      return "text-[rgba(255,255,255,0.55)]";
+    case "string":
+      return "text-[#ff9a8b]";
     default:
       return "text-[rgba(255,255,255,0.55)]";
   }
