@@ -8,9 +8,9 @@ import type {
   SolutionRationale,
   SolutionRationaleMap,
 } from "../lib/algebra/solution";
+import type { ProblemDescriptor } from "../lib/algebra/problems";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
-import { ExplainAccordion } from "./ExplainAccordion";
 import { PlotPanel } from "./plots/PlotPanel";
 import "../styles.css";
 
@@ -50,6 +50,11 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   const followUps = useMemo(() => result?.solution.followUps ?? [], [result]);
   const intervals = useMemo(() => result?.solution.intervals ?? [], [result]);
 
+  const descriptorSummary = useMemo(
+    () => buildDescriptorSummary(result?.solution.descriptor, t),
+    [result?.solution.descriptor, t],
+  );
+
   const normalizedRationale = useMemo(
     () => normalizeRationale(result?.solution.rationale),
     [result?.solution.rationale],
@@ -68,7 +73,8 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
   const hasApprox = Boolean(result?.solution.approx);
   const hasSteps = Boolean(result?.solution.steps.length);
-  const hasExplain = useMemo(() => hasExplainContent(result), [result]);
+  const hasExplainExtras = useMemo(() => hasExplainContent(result), [result]);
+  const explainTabEnabled = Boolean(result);
 
   useEffect(() => {
     if (!result) {
@@ -138,12 +144,9 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
           {result ? (
             <button
               type="button"
-              className={clsx(
-                "axion-button axion-button--ghost text-xs",
-                !hasExplain && "cursor-not-allowed opacity-50",
-              )}
-              onClick={() => hasExplain && setActiveTab("explain")}
-              disabled={!hasExplain}
+              className="axion-button axion-button--ghost text-xs"
+              onClick={() => explainTabEnabled && setActiveTab("explain")}
+              disabled={!explainTabEnabled}
             >
               {t("result.explainButton")}
             </button>
@@ -154,15 +157,24 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
       {result ? (
         <>
           <nav className="axion-tablist flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em]">
-            <TabButton label="Result" active={activeTab === "result"} onClick={() => setActiveTab("result")} />
-            <TabButton label="Steps" active={activeTab === "steps"} disabled={!hasSteps} onClick={() => setActiveTab("steps")} />
             <TabButton
-              label="Explain"
+              label={t("result.nav.result", "Result")}
+              active={activeTab === "result"}
+              onClick={() => setActiveTab("result")}
+            />
+            <TabButton
+              label={t("result.nav.steps", "Steps")}
+              active={activeTab === "steps"}
+              disabled={!hasSteps}
+              onClick={() => setActiveTab("steps")}
+            />
+            <TabButton
+              label={t("result.nav.explain", "Explain")}
               active={activeTab === "explain"}
-              disabled={!hasExplain}
-              onClick={() => setActiveTab("explain")}
+              disabled={!explainTabEnabled}
+              onClick={() => explainTabEnabled && setActiveTab("explain")}
               indicator={
-                hasExplain && hasUnreadFollowUps ? (
+                explainTabEnabled && hasUnreadFollowUps ? (
                   <span className="relative ml-2 flex h-2 w-2 items-center justify-center">
                     <span className="sr-only">{t("result.unreadExplainBadge", "New explain details available")}</span>
                     <span
@@ -253,7 +265,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                         </div>
                       ) : null}
                     </div>
-                    {hasRationaleDetails && hasExplain ? (
+                    {hasRationaleDetails && hasExplainExtras ? (
                       <button
                         type="button"
                         className="axion-button axion-button--ghost self-start text-xs"
@@ -263,7 +275,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                       </button>
                     ) : null}
                   </div>
-                  {hasRationaleDetails && hasExplain ? (
+                  {hasRationaleDetails && hasExplainExtras ? (
                     <p className="mt-2 text-xs text-[rgba(255,255,255,0.55)]">
                       {t("result.rationaleMore", "More detail lives in Explain mode.")}
                     </p>
@@ -313,83 +325,116 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
 
           {activeTab === "explain" ? (
             <div className="space-y-4">
-              {followUps.length ? (
-                <ExplainAccordion
-                  className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30"
-                  intro={
-                    <p className="text-xs text-[rgba(255,255,255,0.65)]">
-                      {t("result.followUpHint")}
+              {descriptorSummary ? (
+                <article className="axion-metric-card space-y-3">
+                  <header className="space-y-2">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                      {t("result.explainSummaryHeading", "Problem overview")}
                     </p>
-                  }
-                  followUps={followUps}
-                  summary={t("result.followUps")}
-                  listClassName="mt-1 flex list-none flex-wrap gap-2 p-0"
-                  itemClassName="m-0"
-                  renderReference={(action) => (
-                    <button
-                      type="button"
-                      className={`axion-button text-xs ${
-                        action.targetStepId && hasSteps ? "" : "cursor-not-allowed opacity-50"
-                      }`}
-                      onClick={() => handleFollowUp(action.targetStepId)}
-                      disabled={!action.targetStepId || !hasSteps}
-                      title={action.description ?? undefined}
-                    >
-                      {action.label}
-                    </button>
+                    <p className="text-sm text-[rgba(255,255,255,0.65)]">
+                      {t(
+                        "result.explainSummaryIntro",
+                        "Axion classified this as {{type}}. Key signals:",
+                        { type: descriptorSummary.typeLabel },
+                      )}
+                    </p>
+                  </header>
+                  {descriptorSummary.fields.length ? (
+                    <dl className="grid gap-2 text-sm text-[var(--ax-text)]">
+                      {descriptorSummary.fields.map((field) => (
+                        <div
+                          key={field.id}
+                          className="flex items-center justify-between rounded border border-[rgba(0,255,242,0.12)] bg-black/40 px-3 py-2"
+                        >
+                          <dt className="uppercase tracking-[0.25em] text-[var(--ax-muted)]">{field.label}</dt>
+                          <dd className="font-mono text-[var(--ax-text)]">{field.value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  ) : (
+                    <p className="text-xs text-[rgba(255,255,255,0.55)]">
+                      {t("result.explainSummaryEmpty", "No extra signals detected.")}
+                    </p>
                   )}
-                />
+                </article>
+              ) : null}
+              {followUps.length ? (
+                <article className="axion-metric-card space-y-3">
+                  <header className="space-y-1">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                      {t("result.followUps")}
+                    </p>
+                    <p className="text-xs text-[rgba(255,255,255,0.65)]">{t("result.followUpHint")}</p>
+                  </header>
+                  <div className="flex flex-wrap gap-2">
+                    {followUps.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        className={clsx(
+                          "axion-button text-xs",
+                          (!action.targetStepId || !hasSteps) && "cursor-not-allowed opacity-50",
+                        )}
+                        onClick={() => handleFollowUp(action.targetStepId)}
+                        disabled={!action.targetStepId || !hasSteps}
+                        title={action.description ?? undefined}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                </article>
               ) : null}
               {normalizedRationale ? (
-                <>
-                  <div className="space-y-3 text-sm text-[rgba(255,255,255,0.75)]">
+                <article className="axion-metric-card space-y-3 text-sm text-[rgba(255,255,255,0.75)]">
+                  <header className="space-y-2">
                     <p className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
                       {t("result.rationaleHeading", "Why this works")}
                     </p>
                     {normalizedRationale.summary ? (
                       <p className="text-base text-[var(--ax-text)]">{normalizedRationale.summary}</p>
                     ) : null}
-                    {normalizedRationale.method ? (
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
-                          {t("result.rationaleMethod", "Method")}
-                        </p>
-                        <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.method}</p>
-                      </div>
-                    ) : null}
-                    {normalizedRationale.validWhen ? (
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
-                          {t("result.rationaleValidWhen", "Valid when")}
-                        </p>
-                        <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.validWhen}</p>
-                      </div>
-                    ) : null}
-                    {normalizedRationale.notes.length ? (
-                      <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
-                          {t("result.rationaleNotes", "Key takeaways")}
-                        </p>
-                        <ul className="mt-1 list-disc space-y-1 pl-5 text-[var(--ax-text)]">
-                          {normalizedRationale.notes.map((note, index) => (
-                            <li key={`explain-rationale-note-${index}`}>{note}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : null}
-                    {normalizedRationale.caution ? (
-                      <div className="rounded-md border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.08)] p-3">
-                        <p className="text-xs uppercase tracking-[0.3em] text-amber-200">
-                          {t("result.rationaleCaution", "Caution")}
-                        </p>
-                        <p className="mt-1 text-sm text-amber-100">{normalizedRationale.caution}</p>
-                      </div>
-                    ) : null}
-                  </div>
+                  </header>
+                  {normalizedRationale.method ? (
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                        {t("result.rationaleMethod", "Method")}
+                      </p>
+                      <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.method}</p>
+                    </div>
+                  ) : null}
+                  {normalizedRationale.validWhen ? (
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                        {t("result.rationaleValidWhen", "Valid when")}
+                      </p>
+                      <p className="mt-1 text-[var(--ax-text)]">{normalizedRationale.validWhen}</p>
+                    </div>
+                  ) : null}
+                  {normalizedRationale.notes.length ? (
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                        {t("result.rationaleNotes", "Key takeaways")}
+                      </p>
+                      <ul className="mt-1 list-disc space-y-1 pl-5 text-[var(--ax-text)]">
+                        {normalizedRationale.notes.map((note, noteIndex) => (
+                          <li key={`rationale-note-${noteIndex}`}>{note}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {normalizedRationale.caution ? (
+                    <div className="rounded-md border border-[rgba(255,196,0,0.25)] bg-[rgba(255,196,0,0.08)] p-3">
+                      <p className="text-xs uppercase tracking-[0.3em] text-amber-200">
+                        {t("result.rationaleCaution", "Caution")}
+                      </p>
+                      <p className="mt-1 text-sm text-amber-100">{normalizedRationale.caution}</p>
+                    </div>
+                  ) : null}
                   {normalizedRationale.details.map((detail, index) => (
                     <div
                       key={`rationale-detail-${index}`}
-                      className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4 text-sm text-[rgba(255,255,255,0.75)]"
+                      className="rounded border border-[rgba(0,255,242,0.15)] bg-black/30 p-4 text-sm text-[rgba(255,255,255,0.75)]"
                     >
                       {detail.title ? (
                         <h5 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
@@ -410,37 +455,60 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                       ) : null}
                     </div>
                   ))}
-                </>
+                </article>
               ) : null}
               {detailEntries.length ? (
-                <dl className="grid gap-2 text-sm">
-                  {detailEntries.map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between rounded border border-[rgba(0,255,242,0.15)] bg-black/30 px-3 py-2">
-                      <dt className="uppercase tracking-[0.25em] text-[var(--ax-muted)]">{key}</dt>
-                      <dd className="font-mono text-[var(--ax-text)]">{String(value)}</dd>
-                    </div>
-                  ))}
-                </dl>
+                <article className="axion-metric-card space-y-3">
+                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                    {t("result.explainDetailsHeading", "Extra signals")}
+                  </h4>
+                  <dl className="grid gap-2 text-sm">
+                    {detailEntries.map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between rounded border border-[rgba(0,255,242,0.12)] bg-black/40 px-3 py-2"
+                      >
+                        <dt className="uppercase tracking-[0.25em] text-[var(--ax-muted)]">{formatLabel(key)}</dt>
+                        <dd className="font-mono text-[var(--ax-text)]">{String(value)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </article>
               ) : null}
               {intervals.length ? (
-                <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">
+                <article className="axion-metric-card space-y-3">
                   <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">{t("result.intervals")}</h4>
-                  <ul className="mt-2 space-y-1 text-sm font-mono text-[var(--ax-text)]">
+                  <ul className="space-y-1 text-sm font-mono text-[var(--ax-text)]">
                     {intervals.map((interval, index) => (
                       <li key={`interval-${index}`}>{interval.latex}</li>
                     ))}
                   </ul>
-                </div>
+                </article>
               ) : null}
               {result.solution.roots ? (
-                <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">
-                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">Oplossingen</h4>
-                  <ul className="mt-2 space-y-1 text-sm font-mono text-[var(--ax-text)]">
+                <article className="axion-metric-card space-y-3">
+                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                    {t("result.explainRootsHeading", "Roots")}
+                  </h4>
+                  <ul className="space-y-1 text-sm font-mono text-[var(--ax-text)]">
                     {result.solution.roots.map((root, index) => (
                       <li key={`root-${index}`}>{typeof root === "number" ? root : root.approx}</li>
                     ))}
                   </ul>
-                </div>
+                </article>
+              ) : null}
+              {!hasExplainExtras ? (
+                <article className="axion-metric-card space-y-2 text-sm text-[rgba(255,255,255,0.7)]">
+                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                    {t("result.explainNoDetailsTitle", "No extra explain data yet")}
+                  </h4>
+                  <p>
+                    {t(
+                      "result.explainNoDetailsBody",
+                      "We still show the classification and metadata above so you can interpret the result.",
+                    )}
+                  </p>
+                </article>
               ) : null}
             </div>
           ) : null}
@@ -505,6 +573,117 @@ function buildCaretLine(expression: string, position: number): string {
   const safePosition = Math.max(0, Math.min(position, expression.length));
   const prefix = " ".repeat(safePosition);
   return `${prefix}^`;
+}
+
+type Translate = (
+  key: string,
+  fallback?: string,
+  params?: Record<string, unknown>,
+) => string;
+
+type DescriptorFieldId =
+  | "variables"
+  | "primaryVariable"
+  | "degree"
+  | "operators"
+  | "functions"
+  | "hasEquality"
+  | "hasDifferential"
+  | "hasProbability"
+  | "hasOptimization"
+  | "matrixDimensions"
+  | "matrixOperations"
+  | "limitSymbol"
+  | "limitApproach"
+  | "limitVariable";
+
+interface DescriptorSummaryField {
+  readonly id: DescriptorFieldId;
+  readonly label: string;
+  readonly value: string;
+}
+
+interface DescriptorSummary {
+  readonly typeLabel: string;
+  readonly fields: readonly DescriptorSummaryField[];
+}
+
+function buildDescriptorSummary(
+  descriptor: ProblemDescriptor | undefined,
+  t: Translate,
+): DescriptorSummary | null {
+  if (!descriptor) {
+    return null;
+  }
+
+  const { metadata } = descriptor;
+  const typeLabel = t(`result.problemType.${descriptor.type}`, descriptor.type);
+  const fields: DescriptorSummaryField[] = [];
+
+  const addField = (id: DescriptorFieldId, raw: string | null | undefined) => {
+    if (!raw) {
+      return;
+    }
+    const label = t(
+      `result.explainSummaryField.${id}`,
+      formatLabel(id),
+    );
+    fields.push({ id, label, value: raw });
+  };
+
+  const addBooleanField = (id: DescriptorFieldId, flag: boolean | undefined) => {
+    if (!flag) {
+      return;
+    }
+    addField(id, t("common.yes", "Yes"));
+  };
+
+  addField("variables", formatMetadataList(metadata.variables));
+  addField("primaryVariable", metadata.primaryVariable ?? null);
+  addField("degree", metadata.degree !== undefined ? String(metadata.degree) : null);
+  addField("operators", formatMetadataList(metadata.operators));
+  addField("functions", formatMetadataList(metadata.functions));
+  addBooleanField("hasEquality", metadata.hasEquality);
+  addBooleanField("hasDifferential", metadata.hasDifferential);
+  addBooleanField("hasProbability", metadata.hasProbability);
+  addBooleanField("hasOptimization", metadata.hasOptimization);
+
+  if (metadata.matrix) {
+    addField("matrixDimensions", formatMatrixDimensions(metadata.matrix.dimensions));
+    addField("matrixOperations", formatMetadataList(metadata.matrix.operations));
+  }
+
+  if (metadata.limit) {
+    addField("limitSymbol", metadata.limit.symbol);
+    addField("limitApproach", metadata.limit.approaching);
+    addField("limitVariable", metadata.limit.variable);
+  }
+
+  return { typeLabel, fields };
+}
+
+function formatMetadataList(values?: readonly string[]): string | null {
+  if (!values || values.length === 0) {
+    return null;
+  }
+  const unique = Array.from(new Set(values)).filter(Boolean);
+  if (!unique.length) {
+    return null;
+  }
+  return unique.join(", ");
+}
+
+function formatMatrixDimensions(
+  dimensions: [number, number] | null | undefined,
+): string | null {
+  if (!dimensions) {
+    return null;
+  }
+  const [rows, cols] = dimensions;
+  if (rows === undefined || cols === undefined) {
+    return null;
+  }
+  return `${rows} x ${cols}`;
 }
 
 function hasExplainContent(result: EvaluationSuccess | null): boolean {

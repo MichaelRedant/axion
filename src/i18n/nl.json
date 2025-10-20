@@ -1,4 +1,9 @@
 {
+  "common": {
+    "yes": "Ja",
+    "no": "Nee",
+    "notAvailable": "Niet beschikbaar"
+  },
   "hero": {
     "title": "AXION",
     "tagline": "Compute Beyond Logic.",
@@ -19,6 +24,11 @@
     "title": "Laatst resultaat",
     "exact": "Exact",
     "approx": "Numeriek (n=8)",
+    "nav": {
+      "result": "Resultaat",
+      "steps": "Stappen",
+      "explain": "Uitleg"
+    },
     "empty": "Nog geen resultaat.",
     "errorPrefix": "Fout",
     "explainButton": "Explain modus",
@@ -32,7 +42,42 @@
     "rationaleValidWhen": "Geldig wanneer",
     "rationaleCaution": "Let op",
     "rationaleNotes": "Belangrijkste punten",
-    "rationaleMore": "Meer uitleg vind je in de Explain-modus."
+    "rationaleMore": "Meer uitleg vind je in de Explain-modus.",
+    "explainSummaryHeading": "Probleemoverzicht",
+    "explainSummaryIntro": "Axion classificeerde dit als {{type}}. Belangrijkste signalen:",
+    "explainSummaryField": {
+      "type": "Probleemtype",
+      "variables": "Variabelen",
+      "primaryVariable": "Hoofdvariabele",
+      "degree": "Polynoomgraad",
+      "operators": "Operatoren",
+      "functions": "Functies",
+      "hasEquality": "Bevat gelijkheidsteken",
+      "hasDifferential": "Differentiaalnotatie",
+      "hasProbability": "Kansrekening",
+      "hasOptimization": "Optimalisatie",
+      "matrixDimensions": "Matrixdimensies",
+      "matrixOperations": "Matrixbewerkingen",
+      "limitSymbol": "Limietsymbool",
+      "limitApproach": "Nadert",
+      "limitVariable": "Limietvariabele"
+    },
+    "problemType": {
+      "quadratic": "Kwadratisch probleem",
+      "linear": "Lineair probleem",
+      "differential": "Differentiaalprobleem",
+      "matrix": "Matrixprobleem",
+      "limit": "Limietprobleem",
+      "probability": "Kansprobleem",
+      "optimization": "Optimalisatieprobleem",
+      "maxima": "Externe engine",
+      "unknown": "Algemene expressie"
+    },
+    "explainNoDetailsTitle": "Nog geen extra uitleg",
+    "explainNoDetailsBody": "We tonen hierboven wel de classificatie en metadata zodat je het resultaat kan duiden.",
+    "explainSummaryEmpty": "Geen extra signalen gevonden.",
+    "explainDetailsHeading": "Extra signalen",
+    "explainRootsHeading": "Oplossingen"
   },
   "history": {
     "title": "Historiek",

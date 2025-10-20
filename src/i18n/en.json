@@ -1,4 +1,9 @@
 {
+  "common": {
+    "yes": "Yes",
+    "no": "No",
+    "notAvailable": "Not available"
+  },
   "hero": {
     "title": "AXION",
     "tagline": "Compute Beyond Logic.",
@@ -19,6 +24,11 @@
     "title": "Latest result",
     "exact": "Exact",
     "approx": "Numeric (n=8)",
+    "nav": {
+      "result": "Result",
+      "steps": "Steps",
+      "explain": "Explain"
+    },
     "empty": "No result yet.",
     "errorPrefix": "Error",
     "explainButton": "Explain mode",
@@ -32,7 +42,42 @@
     "rationaleValidWhen": "Valid when",
     "rationaleCaution": "Caution",
     "rationaleNotes": "Key takeaways",
-    "rationaleMore": "More detail lives in Explain mode."
+    "rationaleMore": "More detail lives in Explain mode.",
+    "explainSummaryHeading": "Problem overview",
+    "explainSummaryIntro": "Axion classified this as {{type}}. Key signals:",
+    "explainSummaryField": {
+      "type": "Problem type",
+      "variables": "Variables",
+      "primaryVariable": "Primary variable",
+      "degree": "Polynomial degree",
+      "operators": "Operators",
+      "functions": "Functions",
+      "hasEquality": "Contains equality",
+      "hasDifferential": "Differential elements",
+      "hasProbability": "Probability indicators",
+      "hasOptimization": "Optimisation signals",
+      "matrixDimensions": "Matrix dimensions",
+      "matrixOperations": "Matrix operations",
+      "limitSymbol": "Limit symbol",
+      "limitApproach": "Approaches",
+      "limitVariable": "Limit variable"
+    },
+    "problemType": {
+      "quadratic": "Quadratic problem",
+      "linear": "Linear problem",
+      "differential": "Differential problem",
+      "matrix": "Matrix problem",
+      "limit": "Limit problem",
+      "probability": "Probability problem",
+      "optimization": "Optimisation problem",
+      "maxima": "External engine",
+      "unknown": "General expression"
+    },
+    "explainNoDetailsTitle": "No extra explain data yet",
+    "explainNoDetailsBody": "We still show the classification and metadata above so you can interpret the result.",
+    "explainSummaryEmpty": "No extra signals detected.",
+    "explainDetailsHeading": "Extra signals",
+    "explainRootsHeading": "Roots"
   },
   "history": {
     "title": "History",
