@@ -10,6 +10,7 @@ interface NotebookPaneProps {
   readonly cells: NotebookCell[];
   readonly katex: KatexHandle | null;
   readonly statusMessage?: string | null;
+  readonly onClearUnpinned: () => void;
   readonly onRestore: (id: string) => void;
   readonly onDuplicateAndEdit: (id: string) => void;
   readonly onCopy: (id: string) => void;
@@ -23,6 +24,7 @@ export function NotebookPane({
   cells,
   katex,
   statusMessage,
+  onClearUnpinned,
   onRestore,
   onDuplicateAndEdit,
   onCopy,
@@ -70,6 +72,13 @@ export function NotebookPane({
       <header className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("notebook.title", "Notebook")}</span>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="axion-button axion-button--ghost text-[11px]"
+            onClick={() => onClearUnpinned()}
+          >
+            {t("notebook.clearUnpinned", "Wis niet-vastgezette")}
+          </button>
           <button
             type="button"
             className="axion-button axion-button--ghost text-[11px]"
