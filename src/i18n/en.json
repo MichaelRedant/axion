@@ -46,6 +46,9 @@
   "keypad": {
     "title": "Scientific panel",
     "legend": "Tap a key to insert",
+    "quick": {
+      "title": "Quick access"
+    },
     "groups": {
       "trig": "Trigonometry",
       "log": "Log & exponent",

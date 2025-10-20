@@ -46,6 +46,9 @@
   "keypad": {
     "title": "Wetenschappelijk paneel",
     "legend": "Tik op een toets om in te voegen",
+    "quick": {
+      "title": "Veelgebruikt"
+    },
     "groups": {
       "trig": "Goniometrie",
       "log": "Log & exponenten",
