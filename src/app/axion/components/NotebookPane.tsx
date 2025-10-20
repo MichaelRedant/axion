@@ -11,6 +11,7 @@ interface NotebookPaneProps {
   readonly katex: KatexHandle | null;
   readonly statusMessage?: string | null;
   readonly onRestore: (id: string) => void;
+  readonly onDuplicateAndEdit: (id: string) => void;
   readonly onCopy: (id: string) => void;
   readonly onTogglePin: (id: string) => void;
   readonly onRemove: (id: string) => void;
@@ -23,6 +24,7 @@ export function NotebookPane({
   katex,
   statusMessage,
   onRestore,
+  onDuplicateAndEdit,
   onCopy,
   onTogglePin,
   onRemove,
@@ -167,6 +169,13 @@ export function NotebookPane({
                     onClick={() => onRestore(cell.id)}
                   >
                     {t("history.restore")}
+                  </button>
+                  <button
+                    type="button"
+                    className="axion-button axion-button--ghost text-xs"
+                    onClick={() => onDuplicateAndEdit(cell.id)}
+                  >
+                    {t("notebook.duplicateEdit", "Duplicate & edit")}
                   </button>
                   <button
                     type="button"

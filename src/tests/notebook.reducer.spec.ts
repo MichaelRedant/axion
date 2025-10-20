@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { NotebookState } from "../app/axion/lib/notebook/types";
 import { __testing, type NotebookAction } from "../app/axion/lib/notebook/useNotebook";
 import type { EvaluationSuccess } from "../app/axion/lib/algebra/engine";
@@ -37,6 +37,10 @@ function reduce(initial: NotebookState, actions: NotebookAction[]): NotebookStat
 describe("notebook reducer", () => {
   beforeEach(() => {
     counter = 0;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("appends success cells and keeps pinned cells at the top", () => {
@@ -82,5 +86,54 @@ describe("notebook reducer", () => {
 
     expect(state.cells).toHaveLength(1);
     expect(state.cells[0]?.id).toBe("cell-2");
+  });
+
+  it("replaces the input of a cell and refreshes its timestamp", () => {
+    const nowSpy = vi.spyOn(Date, "now");
+    nowSpy.mockReturnValueOnce(1000);
+
+    const state = reduce(
+      { cells: [] },
+      [{ type: "appendSuccess", input: "original", evaluation: baseEvaluation }],
+    );
+
+    const target = state.cells[0];
+    expect(target).toBeDefined();
+
+    nowSpy.mockReturnValueOnce(2000);
+
+    const next = notebookReducer(state, {
+      type: "replaceInput",
+      id: target!.id,
+      input: "updated",
+    });
+
+    expect(next.cells[0]).toMatchObject({
+      id: "cell-1",
+      input: "updated",
+      createdAt: 1000,
+      updatedAt: 2000,
+    });
+  });
+
+  it("only mutates the targeted cell when replacing input", () => {
+    const state = reduce(
+      { cells: [] },
+      [
+        { type: "appendSuccess", input: "alpha", evaluation: baseEvaluation },
+        { type: "appendSuccess", input: "beta", evaluation: baseEvaluation },
+      ],
+    );
+
+    const [first, second] = state.cells;
+    const next = notebookReducer(state, {
+      type: "replaceInput",
+      id: "cell-2",
+      input: "gamma",
+    });
+
+    expect(next.cells[0]).not.toBe(first);
+    expect(next.cells[0]).toMatchObject({ id: "cell-2", input: "gamma" });
+    expect(next.cells[1]).toBe(second);
   });
 });
