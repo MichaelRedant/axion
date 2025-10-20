@@ -46,7 +46,7 @@ function AxionShell() {
   const [notebook, notebookActions] = useNotebook();
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
-  const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [theme, setThemeState] = useState("neon");
 
   const inputRef = useRef<CalcInputHandle | null>(null);
@@ -77,10 +77,10 @@ function AxionShell() {
   }, [theme]);
 
   useEffect(() => {
-    if (!clipboardStatus) return;
-    const timeout = window.setTimeout(() => setClipboardStatus(null), 2400);
+    if (!statusMessage) return;
+    const timeout = window.setTimeout(() => setStatusMessage(null), 2400);
     return () => window.clearTimeout(timeout);
-  }, [clipboardStatus]);
+  }, [statusMessage]);
 
   const evaluateExpression = useCallback(() => {
     if (!input.trim()) {
@@ -211,14 +211,14 @@ function AxionShell() {
       if (cell.payload.type !== "success") {
         const payload = `${cell.input}\nError: ${cell.payload.error.message}`;
         await navigator.clipboard.writeText(payload);
-        setClipboardStatus(t("clipboard.success"));
+        setStatusMessage(t("clipboard.success"));
         return;
       }
 
       const approxText = cell.payload.evaluation.approx ?? "n/a";
       const payload = `${cell.input}\nExact: ${cell.payload.evaluation.exact}\n~= ${approxText}`;
       await navigator.clipboard.writeText(payload);
-      setClipboardStatus(t("clipboard.success"));
+      setStatusMessage(t("clipboard.success"));
     },
     [notebook.cells, t],
   );
@@ -247,12 +247,17 @@ function AxionShell() {
   const handleExportNotebook = useCallback(async () => {
     try {
       await exportNotebookToMarkdown(notebook.cells);
-      setClipboardStatus(t("notebook.exported", "Notebook geëxporteerd"));
+      setStatusMessage(t("notebook.exported", "Notebook geëxporteerd"));
     } catch (error) {
       console.warn("Failed to export notebook", error);
-      setClipboardStatus(t("notebook.exportError", "Export mislukt"));
+      setStatusMessage(t("notebook.exportError", "Export mislukt"));
     }
   }, [notebook.cells, t]);
+
+  const handleClearUnpinned = useCallback(() => {
+    notebookActions.clearUnpinned();
+    setStatusMessage(t("notebook.cleared", "Niet-vastgezette notities verwijderd"));
+  }, [notebookActions, t]);
 
   const handleLocaleChange = useCallback(
     (nextLocale: Locale) => {
@@ -381,8 +386,9 @@ function AxionShell() {
             onRemove={handleRemove}
             onReorder={handleReorder}
             onExportMarkdown={handleExportNotebook}
+            onClearUnpinned={handleClearUnpinned}
             katex={katex}
-            statusMessage={clipboardStatus}
+            statusMessage={statusMessage}
           />
         </div>
       </section>
