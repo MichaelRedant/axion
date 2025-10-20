@@ -655,6 +655,10 @@ function addNodes(left: Node, right: Node): Node {
   return binaryNode("+", left, right);
 }
 
+function squareNode(node: Node): Node {
+  return binaryNode("^", node, numberNode(2));
+}
+
 function createLinearCombinationNode(coefficients: number[], variables: [string, string], constant: number): Node {
   const [xVar, yVar] = variables;
   const termX = scaleNode(coefficients[0] ?? 0, symbolNode(xVar));

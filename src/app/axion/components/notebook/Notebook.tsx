@@ -17,7 +17,7 @@ interface NotebookProps {
   readonly onCreateCell: (options?: { afterId?: string | null; type?: NotebookCellType }) => string;
   readonly onSelect: (id: string) => void;
   readonly onChangeInput: (id: string, value: string) => void;
-  readonly onEvaluate: (id: string) => void;
+  readonly onEvaluate: (id: string) => Promise<void> | void;
   readonly onRemove: (id: string) => void;
   readonly onReorder: (id: string, targetOrder: number) => void;
   readonly onActiveInputChange?: (handle: NotebookCellHandle | null) => void;
@@ -145,7 +145,9 @@ export function Notebook({
                 katex={katex}
                 onSelect={() => onSelect(cell.id)}
                 onChangeInput={(value) => onChangeInput(cell.id, value)}
-                onEvaluate={() => onEvaluate(cell.id)}
+                onEvaluate={() => {
+                  void onEvaluate(cell.id);
+                }}
                 onAddBelow={(type) => {
                   createAndFocus({ afterId: cell.id, type });
                 }}

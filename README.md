@@ -39,6 +39,7 @@ The shortcuts are surfaced in the in-app help modal (`Help & shortcuts`).
 - **Framework**: Next.js 14 (App Router, Edge-friendly) with TypeScript.
 - **Styling**: Tailwind CSS + custom CSS variables for theme control.
 - **Algebra engine**: Tokenizer, Pratt parser, simplifier, evaluator, and KaTeX formatter under `src/app/axion/lib/algebra`.
+- **Maxima bridge**: Optional proxy (`/api/maxima`) that forwards expressions to an external Maxima server. Enable by setting `MAXIMA_ENDPOINT` (server) and `NEXT_PUBLIC_MAXIMA_ENABLED=true`.
 - **UI**: Accessible components (`CalcInput`, `ResultPane`, `HistoryPane`, `Keypad`, `HelpModal`, `ThemeToggle`) residing in `src/app/axion/components`.
 - **I18n**: Lightweight context with NL default + EN fallback (`src/app/axion/lib/i18n`).
 - **Testing**: Vitest + Testing Library; algebra unit tests deliver >77% coverage with V8 provider.
@@ -70,6 +71,7 @@ public/
 ## Testing Strategy
 
 - Algebra unit tests cover tokenizer, parser, evaluator, simplifier, formatter, and engine helpers.
+- Maxima bridge tests cover payload normalisation, proxy behaviour, and the asynchronous engine adapter.
 - UI shortcut tests ensure the controlled textarea responds to keyboard commands.
 - Coverage is generated via `npm run test` and documented in the CLI output (goal: ≥70% for algebra files).
 
@@ -84,6 +86,7 @@ public/
 - Angle mode (rad/deg) toggle and precision tuning.
 - Export history to `.txt` and richer KaTeX formatting (matrix, fractions, etc.).
 - Settings panel for personalised keyboard profiles and optional thousand separators.
+- Built-in Maxima session manager with connection status indicator.
 
 ## License
 

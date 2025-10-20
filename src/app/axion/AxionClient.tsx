@@ -5,10 +5,13 @@ import { AxionHero } from "./components/AxionHero";
 import { Keypad } from "./components/Keypad";
 import { HelpModal, type HelpModalHandle } from "./components/HelpModal";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { EngineToggle } from "./components/EngineToggle";
 import { Notebook, type NotebookCellHandle } from "./components/notebook/Notebook";
 import { LanguageProvider, useI18n, type Locale } from "./lib/i18n/context";
 import { useKatex } from "./lib/hooks/useKatex";
-import { analyzeExpression } from "./lib/algebra/engine";
+import { analyzeExpression, type EvaluationEngine } from "./lib/algebra/engine";
+import { analyzeWithMaxima } from "./lib/algebra/maxima/engine";
+import { isMaximaAvailable } from "./lib/algebra/maxima/config";
 import { useNotebook } from "./lib/notebook/useNotebook";
 import "./styles.css";
 
@@ -34,6 +37,8 @@ function AxionShell() {
 
   const [notebook, notebookActions] = useNotebook();
   const [theme, setThemeState] = useState("neon");
+  const [engine, setEngine] = useState<EvaluationEngine>("axion");
+  const maximaAvailable = useMemo(() => isMaximaAvailable(), []);
 
   const helpRef = useRef<HelpModalHandle | null>(null);
   const activeInputRef = useRef<NotebookCellHandle | null>(null);
@@ -70,6 +75,12 @@ function AxionShell() {
     }
   }, [notebook.cells, notebook.selectedId, notebookActions]);
 
+  useEffect(() => {
+    if (!maximaAvailable && engine === "maxima") {
+      setEngine("axion");
+    }
+  }, [engine, maximaAvailable]);
+
   const ensureActiveCell = useCallback(() => {
     if (notebook.selectedId) {
       return notebook.selectedId;
@@ -83,7 +94,7 @@ function AxionShell() {
   }, [notebook.cells, notebook.selectedId, notebookActions]);
 
   const evaluateCell = useCallback(
-    (id: string) => {
+    async (id: string) => {
       const cell = notebook.cells.find((item) => item.id === id);
       if (!cell) {
         return;
@@ -95,20 +106,39 @@ function AxionShell() {
 
       const trimmed = cell.input.trim();
       if (!trimmed) {
-        notebookActions.setError(id, { ok: false, message: t("errors.empty"), position: 0 });
+        notebookActions.setError(id, {
+          ok: false,
+          engine,
+          message: t("errors.empty"),
+          position: 0,
+        });
         return;
       }
 
       notebookActions.markEvaluating(id);
-      const evaluation = analyzeExpression(cell.input);
+      try {
+        const evaluation =
+          engine === "maxima"
+            ? await analyzeWithMaxima(cell.input)
+            : analyzeExpression(cell.input);
 
-      if (evaluation.ok) {
-        notebookActions.setSuccess(id, evaluation);
-      } else {
-        notebookActions.setError(id, evaluation);
+        if (evaluation.ok) {
+          notebookActions.setSuccess(id, evaluation);
+        } else {
+          notebookActions.setError(id, evaluation);
+        }
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : t("errors.unknown", "Onbekende fout");
+        notebookActions.setError(id, {
+          ok: false,
+          engine,
+          message,
+          position: 0,
+        });
       }
     },
-    [notebook.cells, notebookActions, t],
+    [notebook.cells, notebookActions, engine, t],
   );
 
   const handleInsert = useCallback((text: string, offset?: number) => {
@@ -195,6 +225,7 @@ function AxionShell() {
               examples={examples}
             />
           </div>
+          <EngineToggle value={engine} maximaEnabled={maximaAvailable} onChange={setEngine} />
           {exampleSuggestions.length ? (
             <div className="space-y-3">
               <p className="axion-shell__eyebrow text-xs uppercase tracking-[0.35em] text-[var(--ax-muted)]">

@@ -89,7 +89,18 @@ export function tokenize(input: string): Token[] {
       continue;
     }
 
-    if ("+-*/^=".includes(char)) {
+    if ((char === "<" || char === ">") && input[index + 1] === "=") {
+      tokens.push({
+        type: "operator",
+        value: `${char}=`,
+        start: index,
+        end: index + 2,
+      });
+      index += 2;
+      continue;
+    }
+
+    if ("+-*/^=<>".includes(char)) {
       tokens.push({
         type: "operator",
         value: char,

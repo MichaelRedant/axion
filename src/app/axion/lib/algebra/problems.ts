@@ -8,6 +8,7 @@ export type ProblemType =
   | "limit"
   | "probability"
   | "optimization"
+  | "maxima"
   | "unknown";
 
 export interface MatrixStructure {

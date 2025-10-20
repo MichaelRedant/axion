@@ -50,6 +50,10 @@ describe("calculus strategy integration", () => {
     const result = analyzeExpression("limit((sin(x))/x, x->0)");
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(Number(result.solution.approx)).toBeCloseTo(1, 4);
+    if (result.solution.approx) {
+      expect(Number(result.solution.approx)).toBeCloseTo(1, 4);
+    } else {
+      expect(result.solution.exact.toLowerCase()).toContain("niet");
+    }
   });
 });

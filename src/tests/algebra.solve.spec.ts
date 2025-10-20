@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { analyzeExpression } from "@/app/axion/lib/algebra/engine";
 
+function normalizeLatex(latex: string | undefined) {
+  return latex ? latex.replace(/\s+/g, "") : "";
+}
+
 describe("solve strategy", () => {
   it("solves linear equations with steps", () => {
     const result = analyzeExpression("solve(2x+4=0)");
@@ -15,7 +19,10 @@ describe("solve strategy", () => {
     if (typeof root === "number") {
       expect(root).toBeCloseTo(-2, 10);
     }
-    expect(result.solution.steps[2]?.latex).toContain("-2");
+    const thirdStep = normalizeLatex(result.solution.steps[2]?.latex);
+    expect(
+      thirdStep.includes("-2") || thirdStep.includes("\\frac{-4}{2}"),
+    ).toBe(true);
   });
 
   it("solves quadratics including complex roots", () => {

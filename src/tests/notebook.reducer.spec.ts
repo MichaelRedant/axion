@@ -7,6 +7,7 @@ const { notebookReducer } = __testing;
 
 const successEvaluation: EvaluationSuccess = {
   ok: true,
+  engine: "axion",
   tokens: [],
   ast: {} as never,
   simplified: {} as never,
@@ -27,6 +28,7 @@ const successEvaluation: EvaluationSuccess = {
 
 const errorEvaluation: EvaluationFailure = {
   ok: false,
+  engine: "axion",
   message: "Invalid",
   position: 0,
 };
