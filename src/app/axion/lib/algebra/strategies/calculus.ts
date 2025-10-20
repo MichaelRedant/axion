@@ -164,7 +164,7 @@ export class CalculusStrategy implements ProblemStrategy {
     const plotConfig = createCartesianPlot(
       simplified,
       variable,
-      `∫ f(${variable}) d${variable}`,
+      `ÃƒÂ¢Ã‹â€ Ã‚Â« f(${variable}) d${variable}`,
       defaultDomain(),
     );
 
@@ -219,7 +219,7 @@ export class CalculusStrategy implements ProblemStrategy {
       {
         id: "limit",
         title: "Limiet",
-        description: `Beoordeel de limiet voor ${variable} → ${toKaTeX(target)}`,
+        description: `Beoordeel de limiet voor ${variable} ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ${toKaTeX(target)}`,
         latex: latexLimit,
       },
     ];
@@ -297,7 +297,7 @@ export class CalculusStrategy implements ProblemStrategy {
       variable,
       `f(${variable})`,
       domainAround(around, 4),
-      buildTaylorAnnotations(expression, variable, around),
+      buildTaylorAnnotations(expression, variable, around, order),
     );
 
     return {
@@ -452,26 +452,35 @@ function buildLimitAnnotations(
     return undefined;
   }
   const y = evaluateAt(expression, variable, value);
-  return [
+  const annotations: PlotAnnotation[] = [
     {
       type: "point",
       coordinates: [value, Number.isFinite(y ?? NaN) ? (y as number) : 0],
       label: `${variable} → ${formatNumber(value)}`,
     },
   ];
+  annotations.push({ type: "line", coordinates: [value] });
+  return annotations;
 }
 
 function buildTaylorAnnotations(
   expression: Node,
   variable: string,
   around: number,
+  order: number,
 ): PlotAnnotation[] {
   const y = evaluateAt(expression, variable, around);
-  return [
+  const annotations: PlotAnnotation[] = [
     {
       type: "point",
       coordinates: [around, Number.isFinite(y ?? NaN) ? (y as number) : 0],
       label: `Rond ${variable} = ${formatNumber(around)}`,
     },
   ];
+  annotations.push({
+    type: "text",
+    coordinates: [around, Number.isFinite(y ?? NaN) ? (y as number) : 0],
+    label: `orde ${order}`,
+  });
+  return annotations;
 }

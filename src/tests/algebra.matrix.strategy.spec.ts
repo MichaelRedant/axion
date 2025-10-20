@@ -4,7 +4,7 @@ import { formatMatrix } from "@/app/axion/lib/algebra/matrix";
 
 function toExact(input: string) {
   const result = analyzeExpression(input);
-  expect(result.ok).toBe(true);
+  if (!result.ok) { console.log(result); }\n  expect(result.ok).toBe(true);
   if (!result.ok) {
     throw new Error("analyse mislukt");
   }

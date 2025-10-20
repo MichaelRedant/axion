@@ -551,7 +551,17 @@ function buildSolveSystemPlot(matrix: Matrix, vector: number[], solution: number
   }
 
   const variables: [string, string] = ["x", "y"];
-  const expression = createLinearCombinationNode(matrix[0] ?? [], variables, vector[0] ?? 0);
+  let expression: Node | null = null;
+
+  for (let rowIndex = 0; rowIndex < matrix.length; rowIndex += 1) {
+    const equation = createLinearCombinationNode(matrix[rowIndex] ?? [], variables, vector[rowIndex] ?? 0);
+    const squared = squareNode(equation);
+    expression = expression ? addNodes(expression, squared) : squared;
+  }
+
+  if (!expression) {
+    return null;
+  }
 
   const annotations: PlotAnnotation[] = [];
   if (solution.length >= 2 && solution.every((value) => Number.isFinite(value))) {
@@ -652,3 +662,4 @@ function createLinearCombinationNode(coefficients: number[], variables: [string,
   const left = addNodes(termX, termY);
   return binaryNode("-", left, numberNode(constant));
 }
+
