@@ -31,6 +31,7 @@
     },
     "empty": "Nog geen resultaat.",
     "errorPrefix": "Fout",
+    "stepsButton": "Toon stappen",
     "explainButton": "Explain modus",
     "followUps": "Verdiepingsvragen",
     "followUpHint": "Spring naar de juiste stap voor extra context.",
