@@ -2,23 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AxionHero } from "./components/AxionHero";
-import { CalcInput, type CalcInputHandle } from "./components/CalcInput";
 import { Keypad } from "./components/Keypad";
-import { ResultPane } from "./components/ResultPane";
 import { HelpModal, type HelpModalHandle } from "./components/HelpModal";
 import { ThemeToggle } from "./components/ThemeToggle";
+import { Notebook, type NotebookCellHandle } from "./components/notebook/Notebook";
 import { LanguageProvider, useI18n, type Locale } from "./lib/i18n/context";
 import { useKatex } from "./lib/hooks/useKatex";
-import {
-  analyzeExpression,
-  type EvaluationFailure,
-  type EvaluationSuccess,
-} from "./lib/algebra/engine";
-import type { ShortcutAction } from "./lib/utils/keyboard";
-import { NotebookPane } from "./components/NotebookPane";
+import { analyzeExpression } from "./lib/algebra/engine";
 import { useNotebook } from "./lib/notebook/useNotebook";
-import type { NotebookCell } from "./lib/notebook/types";
-import { exportNotebookToMarkdown } from "./lib/notebook/export";
 import "./styles.css";
 
 const THEME_STORAGE_KEY = "axion-theme"; // legacy key, kept for backward compatibility
@@ -28,8 +19,6 @@ const THEME_CLASS_MAP: Record<string, string> = {
   retro: "theme-retro",
   dark: "theme-dark",
 };
-
-type HistoryDirection = "prev" | "next";
 
 export default function AxionClient() {
   return (
@@ -43,17 +32,11 @@ function AxionShell() {
   const { t, setLocale, dictionary, locale } = useI18n();
   const katex = useKatex();
 
-  const [input, setInput] = useState("");
   const [notebook, notebookActions] = useNotebook();
-  const [result, setResult] = useState<EvaluationSuccess | null>(null);
-  const [error, setError] = useState<EvaluationFailure | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [theme, setThemeState] = useState("neon");
 
-  const inputRef = useRef<CalcInputHandle | null>(null);
   const helpRef = useRef<HelpModalHandle | null>(null);
-  const previousInputRef = useRef<string>("");
-  const historyCursorRef = useRef<number | null>(null);
+  const activeInputRef = useRef<NotebookCellHandle | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -78,83 +61,55 @@ function AxionShell() {
   }, [theme]);
 
   useEffect(() => {
-    if (!statusMessage) return;
-    const timeout = window.setTimeout(() => setStatusMessage(null), 2400);
-    return () => window.clearTimeout(timeout);
-  }, [statusMessage]);
-
-  const evaluateExpression = useCallback(() => {
-    if (!input.trim()) {
-      setResult(null);
-      setError({ ok: false, message: t("errors.empty"), position: 0 });
-      setEditingCellId(null);
+    if (!notebook.cells.length) {
+      notebookActions.createCell();
       return;
     }
-
-    const evaluation = analyzeExpression(input);
-
-    if (editingCellId) {
-      notebookActions.replaceInput(editingCellId, input);
-      setEditingCellId(null);
+    if (!notebook.selectedId) {
+      notebookActions.select(notebook.cells[0]!.id);
     }
+  }, [notebook.cells, notebook.selectedId, notebookActions]);
 
-    if (evaluation.ok) {
-      setResult(evaluation);
-      setError(null);
-      notebookActions.appendSuccess(input, evaluation);
-      historyCursorRef.current = null;
-    } else {
-      setResult(null);
-      setError(evaluation);
-      notebookActions.appendError(input, evaluation);
+  const ensureActiveCell = useCallback(() => {
+    if (notebook.selectedId) {
+      return notebook.selectedId;
     }
-  }, [editingCellId, input, notebookActions, setEditingCellId, t]);
+    if (notebook.cells.length) {
+      const firstId = notebook.cells[0]!.id;
+      notebookActions.select(firstId);
+      return firstId;
+    }
+    return notebookActions.createCell();
+  }, [notebook.cells, notebook.selectedId, notebookActions]);
 
-  const navigateHistory = useCallback(
-    (direction: HistoryDirection) => {
-      const navigable = notebook.cells.filter(
-        (cell) => cell.payload.type === "success" && !cell.pinned,
-      );
-      if (!navigable.length) return;
-
-      let cursor = historyCursorRef.current;
-
-      setEditingCellId(null);
-
-      if (direction === "prev") {
-        if (cursor === null) {
-          previousInputRef.current = input;
-          cursor = 0;
-        } else {
-          cursor = Math.min(cursor + 1, navigable.length - 1);
-        }
-
-        const cell = navigable[cursor]!;
-        setInput(cell.input);
-        historyCursorRef.current = cursor;
-        requestAnimationFrame(() => inputRef.current?.focus());
+  const evaluateCell = useCallback(
+    (id: string) => {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) {
         return;
       }
 
-      if (cursor === null) {
+      const trimmed = cell.input.trim();
+      if (!trimmed) {
+        notebookActions.setError(id, { ok: false, message: t("errors.empty"), position: 0 });
         return;
       }
 
-      if (cursor === 0) {
-        historyCursorRef.current = null;
-        setInput(previousInputRef.current);
-        requestAnimationFrame(() => inputRef.current?.focus());
-        return;
-      }
+      notebookActions.markEvaluating(id);
+      const evaluation = analyzeExpression(cell.input);
 
-      cursor -= 1;
-      const cell = navigable[cursor]!;
-      setInput(cell.input);
-      historyCursorRef.current = cursor;
-      requestAnimationFrame(() => inputRef.current?.focus());
+      if (evaluation.ok) {
+        notebookActions.setSuccess(id, evaluation);
+      } else {
+        notebookActions.setError(id, evaluation);
+      }
     },
-    [input, notebook.cells, setEditingCellId],
+    [notebook.cells, notebookActions, t],
   );
+
+  const handleInsert = useCallback((text: string, offset?: number) => {
+    activeInputRef.current?.insert(text, offset);
+  }, []);
 
   const toggleTheme = useCallback(
     (next?: string) => {
@@ -167,131 +122,21 @@ function AxionShell() {
     [],
   );
 
-  const handleShortcut = useCallback(
-    (action: ShortcutAction) => {
-      switch (action) {
-        case "evaluate":
-          evaluateExpression();
-          break;
-        case "clear":
-          setInput("");
-          setResult(null);
-          setError(null);
-          historyCursorRef.current = null;
-          setEditingCellId(null);
-          break;
-        case "historyPrev":
-          navigateHistory("prev");
-          break;
-        case "historyNext":
-          navigateHistory("next");
-          break;
-        case "help":
-          helpRef.current?.open();
-          break;
-        case "toggleTheme":
-          toggleTheme();
-          break;
-        default:
-          break;
-      }
-    },
-    [evaluateExpression, navigateHistory, setEditingCellId, toggleTheme],
-  );
-
-  const loadCellIntoInput = useCallback(
-    (cell: NotebookCell) => {
-      setInput(cell.input);
-      setResult(null);
-      setError(null);
-      historyCursorRef.current = null;
-      requestAnimationFrame(() => inputRef.current?.focus());
-    },
-    [],
-  );
-
-  const handleRestore = useCallback(
-    (id: string) => {
-      const cell = notebook.cells.find((item) => item.id === id);
-      if (!cell) return;
-      setEditingCellId(null);
-      loadCellIntoInput(cell);
-    },
-    [loadCellIntoInput, notebook.cells],
-  );
-
-  const handleDuplicateAndEdit = useCallback(
-    (id: string) => {
-      const cell = notebook.cells.find((item) => item.id === id);
-      if (!cell) return;
-      setEditingCellId(id);
-      loadCellIntoInput(cell);
-    },
-    [loadCellIntoInput, notebook.cells],
-  );
-
-  const handleCopy = useCallback(
-    async (id: string) => {
-      const cell = notebook.cells.find((item) => item.id === id);
-      if (!cell || typeof navigator === "undefined" || !navigator.clipboard) {
-        return;
-      }
-      if (cell.payload.type !== "success") {
-        const payload = `${cell.input}\nError: ${cell.payload.error.message}`;
-        await navigator.clipboard.writeText(payload);
-        setStatusMessage(t("clipboard.success"));
-        return;
-      }
-
-      const approxText = cell.payload.evaluation.approx ?? "n/a";
-      const payload = `${cell.input}\nExact: ${cell.payload.evaluation.exact}\n~= ${approxText}`;
-      await navigator.clipboard.writeText(payload);
-      setStatusMessage(t("clipboard.success"));
-    },
-    [notebook.cells, t],
-  );
-
-  const handlePin = useCallback(
-    (id: string) => {
-      notebookActions.togglePin(id);
-    },
-    [notebookActions],
-  );
-
-  const handleRemove = useCallback(
-    (id: string) => {
-      notebookActions.remove(id);
-    },
-    [notebookActions],
-  );
-
-  const handleReorder = useCallback(
-    (sourceId: string, targetId: string) => {
-      notebookActions.reorder(sourceId, targetId);
-    },
-    [notebookActions],
-  );
-
-  const handleExportNotebook = useCallback(async () => {
-    try {
-      await exportNotebookToMarkdown(notebook.cells);
-      setStatusMessage(t("notebook.exported", "Notebook geëxporteerd"));
-    } catch (error) {
-      console.warn("Failed to export notebook", error);
-      setStatusMessage(t("notebook.exportError", "Export mislukt"));
-    }
-  }, [notebook.cells, t]);
-
-  const handleClearUnpinned = useCallback(() => {
-    notebookActions.clearUnpinned();
-    setStatusMessage(t("notebook.cleared", "Niet-vastgezette notities verwijderd"));
-  }, [notebookActions, t]);
-
   const handleLocaleChange = useCallback(
     (nextLocale: Locale) => {
       setLocale(nextLocale);
     },
     [setLocale],
+  );
+
+  const handleExample = useCallback(
+    (example: string) => {
+      const targetId = ensureActiveCell();
+      notebookActions.updateInput(targetId, example);
+      notebookActions.select(targetId);
+      requestAnimationFrame(() => activeInputRef.current?.focus());
+    },
+    [ensureActiveCell, notebookActions],
   );
 
   const examples = useMemo(() => dictionary.examples ?? [], [dictionary.examples]);
@@ -308,17 +153,9 @@ function AxionShell() {
 
   const exampleSuggestions = useMemo(() => examples.slice(0, 4), [examples]);
 
-  const handleExample = useCallback(
-    (example: string) => {
-      setEditingCellId(null);
-      setInput(example);
-      setResult(null);
-      setError(null);
-      historyCursorRef.current = null;
-      requestAnimationFrame(() => inputRef.current?.focus());
-    },
-    [setEditingCellId],
-  );
+  const handleActiveInputChange = useCallback((handle: NotebookCellHandle | null) => {
+    activeInputRef.current = handle;
+  }, []);
 
   return (
     <main
@@ -377,49 +214,28 @@ function AxionShell() {
       </section>
 
       <section className="axion-shell__workspace flex flex-col gap-6 xl:grid xl:grid-cols-12 xl:gap-8">
-        <div className="order-1 flex flex-col gap-6 xl:order-none xl:col-span-7 xl:row-start-1">
-          <CalcInput
-            ref={inputRef}
-            value={input}
-            onChange={(value) => {
-              setInput(value);
-              historyCursorRef.current = null;
-            }}
-            onShortcut={handleShortcut}
-            label={t("input.label")}
-            placeholder={t("input.placeholder")}
-            evaluateLabel={t("input.evaluate")}
-            clearLabel={t("input.clear")}
-            errorPosition={error?.position ?? null}
-          />
-        </div>
-        <div className="order-2 xl:order-none xl:col-span-5 xl:row-start-1">
-          <Keypad
-            onInsert={(text, offset) => inputRef.current?.insert(text, offset)}
-          />
-        </div>
-        <div className="order-3 xl:order-none xl:col-span-7 xl:row-start-2">
-          <ResultPane
-            result={result}
-            error={error}
-            expression={input}
-            katex={katex}
-          />
-        </div>
-        <div className="order-4 xl:order-none xl:col-span-5 xl:row-start-2">
-          <NotebookPane
+        <div className="order-1 flex flex-col gap-6 xl:order-none xl:col-span-7 xl:row-span-2">
+          <Notebook
             cells={notebook.cells}
-            onRestore={handleRestore}
-            onDuplicateAndEdit={handleDuplicateAndEdit}
-            onCopy={handleCopy}
-            onTogglePin={handlePin}
-            onRemove={handleRemove}
-            onReorder={handleReorder}
-            onExportMarkdown={handleExportNotebook}
-            onClearUnpinned={handleClearUnpinned}
+            selectedId={notebook.selectedId}
             katex={katex}
-            statusMessage={statusMessage}
+            onCreateCell={(options) => {
+              const id = notebookActions.createCell(options);
+              notebookActions.select(id);
+              return id;
+            }}
+            onSelect={(id) => {
+              notebookActions.select(id);
+              requestAnimationFrame(() => activeInputRef.current?.focus());
+            }}
+            onChangeInput={(id, value) => notebookActions.updateInput(id, value)}
+            onEvaluate={evaluateCell}
+            onRemove={(id) => notebookActions.remove(id)}
+            onActiveInputChange={handleActiveInputChange}
           />
+        </div>
+        <div className="order-2 xl:order-none xl:col-span-5 xl:row-span-2">
+          <Keypad onInsert={handleInsert} />
         </div>
       </section>
     </main>

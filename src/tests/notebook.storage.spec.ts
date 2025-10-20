@@ -93,26 +93,27 @@ describe("notebook storage", () => {
     nanoidMock.mockClear();
   });
 
-  it("persisted state with mixed cell payloads can be reloaded", () => {
+  it("persisted state with mixed outputs can be reloaded", () => {
     const state: NotebookState = {
+      selectedId: "cell-success",
       cells: [
         {
           id: "cell-success",
+          order: 0,
           input: "1+1",
           createdAt: 1,
           updatedAt: 2,
           status: "success",
-          pinned: true,
-          payload: { type: "success", evaluation: successEvaluation },
+          output: { type: "success", evaluation: successEvaluation },
         },
         {
           id: "cell-error",
+          order: 1,
           input: "2/0",
           createdAt: 3,
           updatedAt: 4,
           status: "error",
-          pinned: false,
-          payload: { type: "error", error: errorEvaluation },
+          output: { type: "error", error: errorEvaluation },
         },
       ],
     } satisfies NotebookState;
@@ -122,25 +123,28 @@ describe("notebook storage", () => {
     expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       "axion-notebook",
-      expect.stringContaining("\"version\":1"),
+      expect.stringContaining("\"version\":2"),
     );
 
     const reloaded = loadNotebookState();
 
     expect(localStorageMock.getItem).toHaveBeenCalledWith("axion-notebook");
-    expect(reloaded.cells).toHaveLength(2);
-    expect(reloaded.cells[0]).toEqual(state.cells[0]);
-    expect(reloaded.cells[1]).toEqual(state.cells[1]);
+    expect(reloaded).toEqual(state);
   });
 
   it("hydrates legacy notebook entries by generating missing identifiers", () => {
-    const legacyCells: Array<Omit<NotebookCell, "id"> & { id?: string }> = [
+    const legacyCells: Array<Omit<NotebookCell, "id" | "order" | "output" | "status"> & {
+      id?: string;
+      status?: "success" | "error";
+      payload:
+        | { type: "success"; evaluation: EvaluationSuccess }
+        | { type: "error"; error: EvaluationFailure };
+    }> = [
       {
         input: "legacy",
         createdAt: 5,
         updatedAt: 6,
         status: "success",
-        pinned: false,
         payload: { type: "success", evaluation: successEvaluation },
       },
       {
@@ -148,13 +152,12 @@ describe("notebook storage", () => {
         createdAt: 7,
         updatedAt: 8,
         status: "error",
-        pinned: true,
         payload: { type: "error", error: errorEvaluation },
       },
     ];
 
     localStorageMock.__setStore({
-      "axion-notebook": JSON.stringify(legacyCells),
+      "axion-notebook": JSON.stringify({ version: 1, cells: legacyCells }),
     });
 
     const reloaded = loadNotebookState();
@@ -164,14 +167,17 @@ describe("notebook storage", () => {
     expect(reloaded.cells[0]).toMatchObject({
       id: "generated-1",
       input: "legacy",
-      pinned: false,
       status: "success",
+      order: 0,
+      output: { type: "success", evaluation: successEvaluation },
     });
     expect(reloaded.cells[1]).toMatchObject({
       id: "generated-2",
       input: "error-legacy",
-      pinned: true,
       status: "error",
+      order: 1,
+      output: { type: "error", error: errorEvaluation },
     });
+    expect(reloaded.selectedId).toBe("generated-1");
   });
 });

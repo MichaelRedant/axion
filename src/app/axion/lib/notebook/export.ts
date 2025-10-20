@@ -14,8 +14,8 @@ export async function exportNotebookToMarkdown(cells: NotebookCell[]) {
     lines.push(`**Input:** \`${cell.input}\``);
     lines.push("");
 
-    if (cell.payload.type === "success") {
-      const { evaluation } = cell.payload;
+    if (cell.output?.type === "success") {
+      const { evaluation } = cell.output;
       lines.push("**Exact:**");
       lines.push("");
       lines.push(renderLatexBlock(evaluation.exact));
@@ -57,8 +57,11 @@ export async function exportNotebookToMarkdown(cells: NotebookCell[]) {
           lines.push("");
         }
       }
+    } else if (cell.output?.type === "error") {
+      lines.push(`**Error:** ${cell.output.error.message}`);
+      lines.push("");
     } else {
-      lines.push(`**Error:** ${cell.payload.error.message}`);
+      lines.push("**Status:** Pending evaluation");
       lines.push("");
     }
   }
