@@ -10,6 +10,7 @@ import {
 } from "react";
 import { SHORTCUTS } from "../lib/utils/keyboard";
 import { useI18n, type Locale } from "../lib/i18n/context";
+import { Tooltip } from "./Tooltip";
 import "../styles.css";
 
 export interface HelpModalHandle {
@@ -60,13 +61,18 @@ export const HelpModal = forwardRef<HelpModalHandle, HelpModalProps>(
 
     return (
       <>
-        <button
-          type="button"
-          className="axion-button axion-button--ghost text-sm"
-          onClick={() => setOpen(true)}
-        >
-          {t("help.button")}
-        </button>
+        <Tooltip content={t("help.tooltip")}>
+          <button
+            type="button"
+            className="axion-button axion-button--ghost text-sm"
+            onClick={() => setOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={open}
+            aria-controls="axion-help-dialog"
+          >
+            {t("help.button")}
+          </button>
+        </Tooltip>
         {open ? (
           <div
             role="dialog"
@@ -77,6 +83,7 @@ export const HelpModal = forwardRef<HelpModalHandle, HelpModalProps>(
             <div
               ref={dialogRef}
               tabIndex={-1}
+              id="axion-help-dialog"
               className="axion-panel relative max-h-[80vh] w-full max-w-2xl overflow-y-auto space-y-6 p-6"
             >
               <header className="flex flex-col gap-2 text-left">

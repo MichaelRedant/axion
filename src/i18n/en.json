@@ -60,6 +60,7 @@
   },
   "help": {
     "button": "Help & shortcuts",
+    "tooltip": "Open help and keyboard shortcuts",
     "title": "Axion help",
     "subtitle": "Shortcuts and examples",
     "close": "Close",
@@ -111,7 +112,9 @@
   "theme": {
     "enable": "Neon enabled",
     "disable": "Neon off",
-    "retro": "Retro keyboard"
+    "retro": "Retro keyboard",
+    "tooltip": "Switch between neon, retro, and dark themes",
+    "toggleAria": "Toggle theme"
   },
   "engine": {
     "title": "Engine",
@@ -122,7 +125,11 @@
     "unavailable": "Configure a Maxima server to enable this option.",
     "available": "Requests are proxied through the Maxima bridge.",
     "axionBadge": "Axion",
-    "maximaBadge": "Maxima"
+    "maximaBadge": "Maxima",
+    "tooltips": {
+      "axion": "Use the built-in Axion algebra engine",
+      "maxima": "Send requests to the Maxima CAS bridge"
+    }
   },
   "clipboard": {
     "success": "Copied to clipboard"
