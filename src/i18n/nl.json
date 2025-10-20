@@ -57,6 +57,7 @@
   },
   "help": {
     "button": "Help & sneltoetsen",
+    "tooltip": "Open hulp en sneltoetsen",
     "title": "Axion hulp",
     "subtitle": "Sneltoetsen en voorbeelden",
     "close": "Sluit",
@@ -108,7 +109,9 @@
   "theme": {
     "enable": "Neon actief",
     "disable": "Neon uit",
-    "retro": "Retro toetsenbord"
+    "retro": "Retro toetsenbord",
+    "tooltip": "Schakel tussen neon, retro en donker",
+    "toggleAria": "Schakel thema"
   },
   "engine": {
     "title": "Rekenkern",
@@ -119,7 +122,11 @@
     "unavailable": "Configureer een Maxima-server om deze optie te gebruiken.",
     "available": "Aanvragen verlopen via de Maxima-bridge.",
     "axionBadge": "Axion",
-    "maximaBadge": "Maxima"
+    "maximaBadge": "Maxima",
+    "tooltips": {
+      "axion": "Gebruik de ingebouwde Axion-engine",
+      "maxima": "Gebruik het Maxima-CAS via de bridge"
+    }
   },
   "clipboard": {
     "success": "Gekopieerd naar klembord"

@@ -217,6 +217,8 @@ function AxionShell() {
                 dark: t("theme.disable"),
                 default: t("theme.enable"),
               }}
+              tooltip={t("theme.tooltip")}
+              ariaLabel={t("theme.toggleAria")}
             />
             <HelpModal
               ref={helpRef}

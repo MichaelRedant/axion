@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import type { EvaluationEngine } from "../lib/algebra/engine";
 import { useI18n } from "../lib/i18n/context";
+import { Tooltip } from "./Tooltip";
 
 interface EngineToggleProps {
   readonly value: EvaluationEngine;
@@ -13,6 +14,8 @@ interface EngineToggleProps {
 export function EngineToggle({ value, maximaEnabled, onChange }: EngineToggleProps) {
   const { t } = useI18n();
   const maxEnabled = maximaEnabled;
+  const axionTooltip = t("engine.tooltips.axion");
+  const maximaTooltip = maxEnabled ? t("engine.tooltips.maxima") : t("engine.unavailable");
 
   return (
     <div className="space-y-3">
@@ -25,28 +28,39 @@ export function EngineToggle({ value, maximaEnabled, onChange }: EngineTogglePro
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={clsx(
-            "axion-button text-xs",
-            value === "axion" ? "axion-button--primary" : "axion-button--ghost",
-          )}
-          onClick={() => onChange("axion")}
-        >
-          {t("engine.axionButton", "Eigen engine")}
-        </button>
-        <button
-          type="button"
-          className={clsx(
-            "axion-button text-xs",
-            value === "maxima" ? "axion-button--primary" : "axion-button--ghost",
-            !maxEnabled && "cursor-not-allowed opacity-50",
-          )}
-          onClick={() => maxEnabled && onChange("maxima")}
-          disabled={!maxEnabled}
-        >
-          {t("engine.maximaButton", "Maxima")}
-        </button>
+        <Tooltip content={axionTooltip}>
+          <button
+            type="button"
+            className={clsx(
+              "axion-button text-xs",
+              value === "axion" ? "axion-button--primary" : "axion-button--ghost",
+            )}
+            onClick={() => onChange("axion")}
+            aria-pressed={value === "axion"}
+          >
+            {t("engine.axionButton", "Eigen engine")}
+          </button>
+        </Tooltip>
+        <Tooltip content={maximaTooltip}>
+          <button
+            type="button"
+            className={clsx(
+              "axion-button text-xs",
+              value === "maxima" ? "axion-button--primary" : "axion-button--ghost",
+              !maxEnabled && "cursor-not-allowed opacity-50",
+            )}
+            onClick={() => {
+              if (!maxEnabled) {
+                return;
+              }
+              onChange("maxima");
+            }}
+            aria-disabled={!maxEnabled}
+            aria-pressed={value === "maxima"}
+          >
+            {t("engine.maximaButton", "Maxima")}
+          </button>
+        </Tooltip>
       </div>
       {!maxEnabled ? (
         <p className="text-xs text-[rgba(255,255,255,0.45)]">
