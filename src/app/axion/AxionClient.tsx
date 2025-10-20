@@ -17,6 +17,7 @@ import {
 import type { ShortcutAction } from "./lib/utils/keyboard";
 import { NotebookPane } from "./components/NotebookPane";
 import { useNotebook } from "./lib/notebook/useNotebook";
+import type { NotebookCell } from "./lib/notebook/types";
 import { exportNotebookToMarkdown } from "./lib/notebook/export";
 import "./styles.css";
 
@@ -46,6 +47,7 @@ function AxionShell() {
   const [notebook, notebookActions] = useNotebook();
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
+  const pendingEditCellIdRef = useRef<string | null>(null);
   const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
   const [theme, setThemeState] = useState("neon");
 
@@ -86,10 +88,17 @@ function AxionShell() {
     if (!input.trim()) {
       setResult(null);
       setError({ ok: false, message: t("errors.empty"), position: 0 });
+      pendingEditCellIdRef.current = null;
       return;
     }
 
     const evaluation = analyzeExpression(input);
+
+    const pendingEditCellId = pendingEditCellIdRef.current;
+    if (pendingEditCellId) {
+      notebookActions.replaceInput(pendingEditCellId, input);
+      pendingEditCellIdRef.current = null;
+    }
 
     if (evaluation.ok) {
       setResult(evaluation);
@@ -111,6 +120,8 @@ function AxionShell() {
       if (!navigable.length) return;
 
       let cursor = historyCursorRef.current;
+
+      pendingEditCellIdRef.current = null;
 
       if (direction === "prev") {
         if (cursor === null) {
@@ -169,6 +180,7 @@ function AxionShell() {
           setResult(null);
           setError(null);
           historyCursorRef.current = null;
+          pendingEditCellIdRef.current = null;
           break;
         case "historyPrev":
           navigateHistory("prev");
@@ -189,17 +201,35 @@ function AxionShell() {
     [evaluateExpression, navigateHistory, toggleTheme],
   );
 
-  const handleRestore = useCallback(
-    (id: string) => {
-      const cell = notebook.cells.find((item) => item.id === id);
-      if (!cell) return;
+  const loadCellIntoInput = useCallback(
+    (cell: NotebookCell) => {
       setInput(cell.input);
       setResult(null);
       setError(null);
       historyCursorRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [notebook.cells],
+    [],
+  );
+
+  const handleRestore = useCallback(
+    (id: string) => {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) return;
+      pendingEditCellIdRef.current = null;
+      loadCellIntoInput(cell);
+    },
+    [loadCellIntoInput, notebook.cells],
+  );
+
+  const handleDuplicateAndEdit = useCallback(
+    (id: string) => {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) return;
+      pendingEditCellIdRef.current = id;
+      loadCellIntoInput(cell);
+    },
+    [loadCellIntoInput, notebook.cells],
   );
 
   const handleCopy = useCallback(
@@ -277,6 +307,7 @@ function AxionShell() {
 
   const handleExample = useCallback(
     (example: string) => {
+      pendingEditCellIdRef.current = null;
       setInput(example);
       setResult(null);
       setError(null);
@@ -376,6 +407,7 @@ function AxionShell() {
           <NotebookPane
             cells={notebook.cells}
             onRestore={handleRestore}
+            onDuplicateAndEdit={handleDuplicateAndEdit}
             onCopy={handleCopy}
             onTogglePin={handlePin}
             onRemove={handleRemove}

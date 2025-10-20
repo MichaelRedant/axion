@@ -67,6 +67,15 @@
       "toggleTheme": "Toggle neon theme"
     }
   },
+  "notebook": {
+    "title": "Notebook",
+    "export": "Export Markdown",
+    "empty": "No cells yet",
+    "drag": "drag",
+    "explain": "Explain references",
+    "remove": "Remove",
+    "duplicateEdit": "Duplicate & edit"
+  },
   "theme": {
     "enable": "Neon enabled",
     "disable": "Neon off",
