@@ -4,6 +4,7 @@ import { useMemo, useState, type DragEvent } from "react";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
 import type { NotebookCell } from "../lib/notebook/types";
+import { ExplainAccordion } from "./ExplainAccordion";
 import "../styles.css";
 
 interface NotebookPaneProps {
@@ -153,22 +154,11 @@ export function NotebookPane({
                   {payload.type === "success" && payload.evaluation.approx ? (
                     <p className="mt-2 font-mono text-xs text-amber-200">~= {payload.evaluation.approx}</p>
                   ) : null}
-                  {payload.type === "success" && payload.evaluation.solution.followUps?.length ? (
-                    <details className="mt-3 space-y-2 rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.24)] p-3">
-                      <summary className="cursor-pointer text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">
-                        {t("notebook.explain", "Explain references")}
-                      </summary>
-                      <ul className="space-y-2 text-sm">
-                        {payload.evaluation.solution.followUps.map((reference) => (
-                          <li key={reference.id}>
-                            <span className="font-semibold text-[rgba(255,255,255,0.85)]">{reference.label}</span>
-                            {reference.description ? (
-                              <span className="block text-xs text-[rgba(255,255,255,0.65)]">{reference.description}</span>
-                            ) : null}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
+                  {payload.type === "success" ? (
+                    <ExplainAccordion
+                      className="mt-3"
+                      followUps={payload.evaluation.solution.followUps ?? []}
+                    />
                   ) : null}
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
