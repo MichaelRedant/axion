@@ -67,6 +67,15 @@
       "toggleTheme": "Schakel neon thema"
     }
   },
+  "notebook": {
+    "title": "Notebook",
+    "export": "Exporteer Markdown",
+    "empty": "Nog geen cellen",
+    "drag": "slepen",
+    "explain": "Leg referenties uit",
+    "remove": "Verwijder",
+    "duplicateEdit": "Dupliceer en bewerk"
+  },
   "theme": {
     "enable": "Neon actief",
     "disable": "Neon uit",
