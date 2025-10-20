@@ -10,6 +10,7 @@ import type {
 } from "../lib/algebra/solution";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
+import { ExplainAccordion } from "./ExplainAccordion";
 import { PlotPanel } from "./plots/PlotPanel";
 import "../styles.css";
 
@@ -313,28 +314,31 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
           {activeTab === "explain" ? (
             <div className="space-y-4">
               {followUps.length ? (
-                <div className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30 p-4">
-                  <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
-                    {t("result.followUps")}
-                  </h4>
-                  <p className="mt-2 text-xs text-[rgba(255,255,255,0.65)]">{t("result.followUpHint")}</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {followUps.map((action) => (
-                      <button
-                        key={action.id}
-                        type="button"
-                        className={`axion-button text-xs ${
-                          action.targetStepId && hasSteps ? "" : "cursor-not-allowed opacity-50"
-                        }`}
-                        onClick={() => handleFollowUp(action.targetStepId)}
-                        disabled={!action.targetStepId || !hasSteps}
-                        title={action.description ?? undefined}
-                      >
-                        {action.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <ExplainAccordion
+                  className="rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/30"
+                  intro={
+                    <p className="text-xs text-[rgba(255,255,255,0.65)]">
+                      {t("result.followUpHint")}
+                    </p>
+                  }
+                  followUps={followUps}
+                  summary={t("result.followUps")}
+                  listClassName="mt-1 flex list-none flex-wrap gap-2 p-0"
+                  itemClassName="m-0"
+                  renderReference={(action) => (
+                    <button
+                      type="button"
+                      className={`axion-button text-xs ${
+                        action.targetStepId && hasSteps ? "" : "cursor-not-allowed opacity-50"
+                      }`}
+                      onClick={() => handleFollowUp(action.targetStepId)}
+                      disabled={!action.targetStepId || !hasSteps}
+                      title={action.description ?? undefined}
+                    >
+                      {action.label}
+                    </button>
+                  )}
+                />
               ) : null}
               {normalizedRationale ? (
                 <>
