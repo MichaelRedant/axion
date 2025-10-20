@@ -40,9 +40,30 @@ describe("notebook reducer", () => {
     const state = reduce(
       { cells: [], selectedId: null },
       [
-        { type: "create", id: "cell-1", input: "", afterId: null, timestamp: 1 },
-        { type: "create", id: "cell-2", input: "", afterId: "cell-1", timestamp: 2 },
-        { type: "create", id: "cell-3", input: "", afterId: "cell-1", timestamp: 3 },
+        {
+          type: "create",
+          id: "cell-1",
+          input: "",
+          afterId: null,
+          timestamp: 1,
+          cellType: "math",
+        },
+        {
+          type: "create",
+          id: "cell-2",
+          input: "",
+          afterId: "cell-1",
+          timestamp: 2,
+          cellType: "math",
+        },
+        {
+          type: "create",
+          id: "cell-3",
+          input: "",
+          afterId: "cell-1",
+          timestamp: 3,
+          cellType: "math",
+        },
       ],
     );
 
@@ -54,13 +75,21 @@ describe("notebook reducer", () => {
     const state = reduce(
       { cells: [], selectedId: null },
       [
-        { type: "create", id: "cell-1", input: "1+1", afterId: null, timestamp: 1 },
+        {
+          type: "create",
+          id: "cell-1",
+          input: "1+1",
+          afterId: null,
+          timestamp: 1,
+          cellType: "math",
+        },
         { type: "setSuccess", id: "cell-1", evaluation: successEvaluation, timestamp: 2 },
       ],
     );
 
     expect(state.cells[0]).toMatchObject({
       id: "cell-1",
+      type: "math",
       status: "success",
       output: { type: "success", evaluation: successEvaluation },
     });
@@ -70,7 +99,14 @@ describe("notebook reducer", () => {
     const initial = reduce(
       { cells: [], selectedId: null },
       [
-        { type: "create", id: "cell-1", input: "1+1", afterId: null, timestamp: 1 },
+        {
+          type: "create",
+          id: "cell-1",
+          input: "1+1",
+          afterId: null,
+          timestamp: 1,
+          cellType: "math",
+        },
         { type: "setSuccess", id: "cell-1", evaluation: successEvaluation, timestamp: 2 },
       ],
     );
@@ -84,6 +120,7 @@ describe("notebook reducer", () => {
 
     expect(next.cells[0]).toMatchObject({
       id: "cell-1",
+      type: "math",
       input: "2+2",
       status: "idle",
       output: null,
@@ -94,13 +131,21 @@ describe("notebook reducer", () => {
     const state = reduce(
       { cells: [], selectedId: null },
       [
-        { type: "create", id: "cell-1", input: "1/0", afterId: null, timestamp: 1 },
+        {
+          type: "create",
+          id: "cell-1",
+          input: "1/0",
+          afterId: null,
+          timestamp: 1,
+          cellType: "math",
+        },
         { type: "setError", id: "cell-1", error: errorEvaluation, timestamp: 2 },
       ],
     );
 
     expect(state.cells[0]).toMatchObject({
       id: "cell-1",
+      type: "math",
       status: "error",
       output: { type: "error", error: errorEvaluation },
     });
@@ -110,14 +155,66 @@ describe("notebook reducer", () => {
     const state = reduce(
       { cells: [], selectedId: null },
       [
-        { type: "create", id: "cell-1", input: "1", afterId: null, timestamp: 1 },
-        { type: "create", id: "cell-2", input: "2", afterId: "cell-1", timestamp: 2 },
-        { type: "create", id: "cell-3", input: "3", afterId: "cell-2", timestamp: 3 },
+        {
+          type: "create",
+          id: "cell-1",
+          input: "1",
+          afterId: null,
+          timestamp: 1,
+          cellType: "math",
+        },
+        {
+          type: "create",
+          id: "cell-2",
+          input: "2",
+          afterId: "cell-1",
+          timestamp: 2,
+          cellType: "math",
+        },
+        {
+          type: "create",
+          id: "cell-3",
+          input: "3",
+          afterId: "cell-2",
+          timestamp: 3,
+          cellType: "math",
+        },
         { type: "remove", id: "cell-3" },
       ],
     );
 
     expect(state.cells.map((cell) => cell.id)).toEqual(["cell-1", "cell-2"]);
     expect(state.selectedId).toBe("cell-2");
+  });
+
+  it("keeps text cells idle when updating content", () => {
+    const state = reduce(
+      { cells: [], selectedId: null },
+      [
+        {
+          type: "create",
+          id: "cell-text",
+          input: "initial",
+          afterId: null,
+          timestamp: 1,
+          cellType: "text",
+        },
+      ],
+    );
+
+    const next = notebookReducer(state, {
+      type: "updateInput",
+      id: "cell-text",
+      input: "updated",
+      timestamp: 2,
+    });
+
+    expect(next.cells[0]).toMatchObject({
+      id: "cell-text",
+      type: "text",
+      input: "updated",
+      status: "idle",
+      output: null,
+    });
   });
 });

@@ -100,6 +100,7 @@ describe("notebook storage", () => {
         {
           id: "cell-success",
           order: 0,
+          type: "math",
           input: "1+1",
           createdAt: 1,
           updatedAt: 2,
@@ -109,6 +110,7 @@ describe("notebook storage", () => {
         {
           id: "cell-error",
           order: 1,
+          type: "math",
           input: "2/0",
           createdAt: 3,
           updatedAt: 4,
@@ -123,7 +125,7 @@ describe("notebook storage", () => {
     expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       "axion-notebook",
-      expect.stringContaining("\"version\":2"),
+      expect.stringContaining("\"version\":3"),
     );
 
     const reloaded = loadNotebookState();
@@ -141,6 +143,7 @@ describe("notebook storage", () => {
         | { type: "error"; error: EvaluationFailure };
     }> = [
       {
+        type: "math",
         input: "legacy",
         createdAt: 5,
         updatedAt: 6,
@@ -148,6 +151,7 @@ describe("notebook storage", () => {
         payload: { type: "success", evaluation: successEvaluation },
       },
       {
+        type: "math",
         input: "error-legacy",
         createdAt: 7,
         updatedAt: 8,
@@ -169,6 +173,7 @@ describe("notebook storage", () => {
       input: "legacy",
       status: "success",
       order: 0,
+      type: "math",
       output: { type: "success", evaluation: successEvaluation },
     });
     expect(reloaded.cells[1]).toMatchObject({
@@ -176,6 +181,7 @@ describe("notebook storage", () => {
       input: "error-legacy",
       status: "error",
       order: 1,
+      type: "math",
       output: { type: "error", error: errorEvaluation },
     });
     expect(reloaded.selectedId).toBe("generated-1");

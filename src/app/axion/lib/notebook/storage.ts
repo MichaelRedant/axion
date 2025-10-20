@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const STORAGE_KEY = "axion-notebook";
-const CURRENT_VERSION = 2;
+const CURRENT_VERSION = 3;
 
 type LegacyNotebookCell = {
   readonly id?: string;
@@ -57,14 +57,29 @@ export function loadNotebookState(): NotebookState {
       return { cells: [], selectedId: null };
     }
 
-    if ("version" in parsed && parsed.version === CURRENT_VERSION) {
-      const cells = parsed.cells.map(deserializeCell);
-      return { cells, selectedId: parsed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
-    }
+    if ("version" in parsed) {
+      if (parsed.version === CURRENT_VERSION) {
+        const typed = parsed as NotebookSerializedState;
+        const cells = typed.cells.map(deserializeCell);
+        return { cells, selectedId: typed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
+      }
 
-    if ("version" in parsed && parsed.version === 1) {
-      const cells = parsed.cells.map((cell, index) => deserializeLegacyCell(cell, index));
-      return { cells, selectedId: cells[0]?.id ?? null } satisfies NotebookState;
+      if (parsed.version === 2) {
+        const typed = parsed as NotebookSerializedState;
+        const cells = typed.cells.map((cell) =>
+          deserializeCell({
+            ...cell,
+            type: (cell as NotebookSerializedCell).type ?? "math",
+          }),
+        );
+        return { cells, selectedId: typed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
+      }
+
+      if (parsed.version === 1) {
+        const typed = parsed as LegacySerializedState;
+        const cells = typed.cells.map((cell, index) => deserializeLegacyCell(cell, index));
+        return { cells, selectedId: cells[0]?.id ?? null } satisfies NotebookState;
+      }
     }
 
     return { cells: [], selectedId: null } satisfies NotebookState;
@@ -114,6 +129,7 @@ function serializeOutput(output: NotebookCellSuccessOutput | NotebookCellErrorOu
 function deserializeCell(serialized: NotebookSerializedCell): NotebookCell {
   return {
     ...serialized,
+    type: serialized.type ?? "math",
     output: serialized.output ? deserializeOutput(serialized.output) : null,
   } satisfies NotebookCell;
 }
@@ -143,6 +159,7 @@ function deserializeLegacyCell(cell: LegacyNotebookCell, index: number): Noteboo
   return {
     id,
     order: index,
+    type: "math",
     input: cell.input,
     createdAt: cell.createdAt ?? now,
     updatedAt: cell.updatedAt ?? now,

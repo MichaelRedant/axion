@@ -1,7 +1,7 @@
 "use client";
 
 import clsx from "clsx";
-import {
+import React, {
   forwardRef,
   useImperativeHandle,
   useMemo,
@@ -9,8 +9,12 @@ import {
 } from "react";
 import type { KatexHandle } from "../../lib/hooks/useKatex";
 import { useI18n } from "../../lib/i18n/context";
-import type { NotebookCell as NotebookCellModel } from "../../lib/notebook/types";
+import type {
+  NotebookCell as NotebookCellModel,
+  NotebookCellType,
+} from "../../lib/notebook/types";
 import { MainInput, type MainInputHandle } from "./MainInput";
+import { TextCellEditor, type TextCellEditorHandle } from "./TextCellEditor";
 
 export interface NotebookCellHandle {
   insert: (text: string, cursorOffset?: number) => void;
@@ -20,13 +24,17 @@ export interface NotebookCellHandle {
 interface NotebookCellProps {
   readonly cell: NotebookCellModel;
   readonly index: number;
+  readonly isFirst: boolean;
+  readonly isLast: boolean;
   readonly isSelected: boolean;
   readonly katex: KatexHandle | null;
   readonly onSelect: () => void;
   readonly onChangeInput: (value: string) => void;
   readonly onEvaluate: () => void;
-  readonly onAddBelow: () => void;
+  readonly onAddBelow: (type: NotebookCellType) => void;
   readonly onRemove: () => void;
+  readonly onMoveUp: () => void;
+  readonly onMoveDown: () => void;
 }
 
 type Ref = NotebookCellHandle;
@@ -36,6 +44,8 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
     {
       cell,
       index,
+      isFirst,
+      isLast,
       isSelected,
       katex,
       onSelect,
@@ -43,16 +53,31 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       onEvaluate,
       onAddBelow,
       onRemove,
+      onMoveUp,
+      onMoveDown,
     },
     ref,
   ) => {
     const { t, locale } = useI18n();
-    const inputRef = useRef<MainInputHandle | null>(null);
+    const mathInputRef = useRef<MainInputHandle | null>(null);
+    const textInputRef = useRef<TextCellEditorHandle | null>(null);
 
     useImperativeHandle(ref, () => ({
-      insert: (text: string, offset?: number) => inputRef.current?.insert(text, offset),
-      focus: () => inputRef.current?.focus(),
-    }));
+      insert: (text: string, offset?: number) => {
+        if (cell.type === "math") {
+          mathInputRef.current?.insert(text, offset);
+        } else {
+          textInputRef.current?.insert(text, offset);
+        }
+      },
+      focus: () => {
+        if (cell.type === "math") {
+          mathInputRef.current?.focus();
+        } else {
+          textInputRef.current?.focus();
+        }
+      },
+    }), [cell.type]);
 
     const formattedTimestamp = useMemo(() => {
       try {
@@ -67,7 +92,7 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
     }, [cell.updatedAt, locale]);
 
     const exactHtml = useMemo(() => {
-      if (!katex || cell.output?.type !== "success") {
+      if (cell.type !== "math" || !katex || cell.output?.type !== "success") {
         return null;
       }
 
@@ -76,9 +101,12 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       } catch {
         return null;
       }
-    }, [cell.output, katex]);
+    }, [cell.output, cell.type, katex]);
 
     const statusLabel = useMemo(() => {
+      if (cell.type !== "math") {
+        return null;
+      }
       switch (cell.status) {
         case "running":
           return t("notebook.running", "Evaluating…");
@@ -89,9 +117,23 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
         default:
           return t("notebook.idle", "Idle");
       }
-    }, [cell.status, t]);
+    }, [cell.status, cell.type, t]);
 
-    const showStatus = cell.status !== "idle";
+    const showStatus = cell.type === "math" && cell.status !== "idle";
+
+    const cellHeading =
+      cell.type === "math"
+        ? t("notebook.cellHeading", "Cell {{index}}", { index: index + 1 })
+        : t("notebook.textCellHeading", "Text cell {{index}}", { index: index + 1 });
+
+    const handleContainerClick = () => {
+      onSelect();
+      if (cell.type === "math") {
+        mathInputRef.current?.focus();
+      } else {
+        textInputRef.current?.focus();
+      }
+    };
 
     return (
       <article
@@ -99,105 +141,153 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
           "axion-panel space-y-4 p-4 sm:p-5 transition",
           isSelected ? "ring-2 ring-[rgba(0,255,242,0.35)]" : "ring-1 ring-transparent",
         )}
-        onClick={() => {
-          onSelect();
-          inputRef.current?.focus();
-        }}
+        onClick={handleContainerClick}
         data-testid={`notebook-cell-${cell.id}`}
       >
         <header className="flex flex-col gap-1">
           <div className="flex items-center justify-between gap-2 text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">
-            <span>
-              {t("notebook.cellHeading", "Cell {{index}}", { index: index + 1 })}
-            </span>
+            <span>{cellHeading}</span>
             <span className="text-[rgba(255,255,255,0.4)]">{formattedTimestamp}</span>
           </div>
-          {showStatus ? (
+          {showStatus && statusLabel ? (
             <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgba(255,255,255,0.65)]">
               {statusLabel}
             </span>
           ) : null}
         </header>
-        <MainInput
-          ref={inputRef}
-          value={cell.input}
-          label={t("notebook.inputLabel", "Input")}
-          placeholder={t("notebook.inputPlaceholder", "Type an expression")}
-          onChange={onChangeInput}
-          onEvaluate={onEvaluate}
-          onFocus={onSelect}
-          selected={isSelected}
-        />
-        <section className="space-y-3">
-          <h3 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
-            {t("notebook.outputHeading", "Output")}
-          </h3>
-          {cell.output?.type === "success" ? (
-            <div className="space-y-2 text-base" data-testid={`notebook-output-${cell.id}`}>
-              {exactHtml ? (
-                <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
-              ) : (
-                <code className="font-mono text-sm text-[var(--ax-muted)]">
-                  {cell.output.evaluation.exact}
-                </code>
-              )}
-              {cell.output.evaluation.approx ? (
-                <p className="font-mono text-xs text-amber-200">
-                  ~= {cell.output.evaluation.approx}
+        {cell.type === "math" ? (
+          <>
+            <MainInput
+              ref={mathInputRef}
+              value={cell.input}
+              label={t("notebook.inputLabel", "Input")}
+              placeholder={t("notebook.inputPlaceholder", "Type an expression")}
+              onChange={onChangeInput}
+              onEvaluate={onEvaluate}
+              onFocus={onSelect}
+              selected={isSelected}
+            />
+            <section className="space-y-3">
+              <h3 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                {t("notebook.outputHeading", "Output")}
+              </h3>
+              {cell.output?.type === "success" ? (
+                <div className="space-y-2 text-base" data-testid={`notebook-output-${cell.id}`}>
+                  {exactHtml ? (
+                    <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
+                  ) : (
+                    <code className="font-mono text-sm text-[var(--ax-muted)]">
+                      {cell.output.evaluation.exact}
+                    </code>
+                  )}
+                  {cell.output.evaluation.approx ? (
+                    <p className="font-mono text-xs text-amber-200">
+                      ~= {cell.output.evaluation.approx}
+                    </p>
+                  ) : null}
+                  {cell.output.evaluation.solution.followUps?.length ? (
+                    <details className="space-y-2 rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.24)] p-3">
+                      <summary className="cursor-pointer text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">
+                        {t("notebook.explain", "Explain references")}
+                      </summary>
+                      <ul className="space-y-2 text-sm">
+                        {cell.output.evaluation.solution.followUps.map((reference) => (
+                          <li key={reference.id}>
+                            <span className="font-semibold text-[rgba(255,255,255,0.85)]">
+                              {reference.label}
+                            </span>
+                            {reference.description ? (
+                              <span className="block text-xs text-[rgba(255,255,255,0.65)]">
+                                {reference.description}
+                              </span>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
+                </div>
+              ) : cell.output?.type === "error" ? (
+                <p className="font-mono text-sm text-rose-200" data-testid={`notebook-output-${cell.id}`}>
+                  {cell.output.error.message}
                 </p>
-              ) : null}
-              {cell.output.evaluation.solution.followUps?.length ? (
-                <details className="space-y-2 rounded border border-[rgba(255,255,255,0.1)] bg-[rgba(0,0,0,0.24)] p-3">
-                  <summary className="cursor-pointer text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">
-                    {t("notebook.explain", "Explain references")}
-                  </summary>
-                  <ul className="space-y-2 text-sm">
-                    {cell.output.evaluation.solution.followUps.map((reference) => (
-                      <li key={reference.id}>
-                        <span className="font-semibold text-[rgba(255,255,255,0.85)]">
-                          {reference.label}
-                        </span>
-                        {reference.description ? (
-                          <span className="block text-xs text-[rgba(255,255,255,0.65)]">
-                            {reference.description}
-                          </span>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              ) : null}
-            </div>
-          ) : cell.output?.type === "error" ? (
-            <p className="font-mono text-sm text-rose-200" data-testid={`notebook-output-${cell.id}`}>
-              {cell.output.error.message}
-            </p>
-          ) : (
-            <p className="text-sm text-[rgba(255,255,255,0.45)]">
-              {t("notebook.pending", "No evaluation yet")}
-            </p>
-          )}
-        </section>
+              ) : (
+                <p className="text-sm text-[rgba(255,255,255,0.45)]">
+                  {t("notebook.pending", "No evaluation yet")}
+                </p>
+              )}
+            </section>
+          </>
+        ) : (
+          <TextCellEditor
+            ref={textInputRef}
+            value={cell.input}
+            label={t("notebook.textInputLabel", "Content")}
+            placeholder={t("notebook.textInputPlaceholder", "Write notes using Markdown")}
+            previewLabel={t("notebook.textPreviewHeading", "Preview")}
+            emptyPreviewMessage={t("notebook.textPreviewEmpty", "Nothing to preview yet")}
+            onChange={onChangeInput}
+            onFocus={onSelect}
+            selected={isSelected}
+            testId={`notebook-text-preview-${cell.id}`}
+          />
+        )}
         <footer className="flex flex-wrap gap-2">
+          {cell.type === "math" ? (
+            <button
+              type="button"
+              className="axion-button axion-button--primary text-xs"
+              onClick={(event) => {
+                event.stopPropagation();
+                onEvaluate();
+              }}
+            >
+              {t("notebook.evaluate", "Evaluate")}
+            </button>
+          ) : null}
           <button
             type="button"
-            className="axion-button axion-button--primary text-xs"
+            className="axion-button axion-button--ghost text-xs"
             onClick={(event) => {
               event.stopPropagation();
-              onEvaluate();
+              onAddBelow("math");
             }}
           >
-            {t("notebook.evaluate", "Evaluate")}
+            {t("notebook.addMathBelow", "Add math below")}
           </button>
           <button
             type="button"
             className="axion-button axion-button--ghost text-xs"
             onClick={(event) => {
               event.stopPropagation();
-              onAddBelow();
+              onAddBelow("text");
             }}
           >
-            {t("notebook.addBelow", "Add cell below")}
+            {t("notebook.addTextBelow", "Add text below")}
+          </button>
+          <button
+            type="button"
+            className="axion-button axion-button--ghost text-xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (isFirst) return;
+              onMoveUp();
+            }}
+            disabled={isFirst}
+          >
+            {t("notebook.moveUp", "Move up")}
+          </button>
+          <button
+            type="button"
+            className="axion-button axion-button--ghost text-xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (isLast) return;
+              onMoveDown();
+            }}
+            disabled={isLast}
+          >
+            {t("notebook.moveDown", "Move down")}
           </button>
           <button
             type="button"
