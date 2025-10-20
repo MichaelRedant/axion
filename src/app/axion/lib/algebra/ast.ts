@@ -11,7 +11,18 @@ export type Node =
   | BinaryNode
   | CallNode;
 
-export type BinaryOperator = "+" | "-" | "*" | "/" | "^" | "=" | "->";
+export type BinaryOperator =
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "^"
+  | "="
+  | "->"
+  | "<"
+  | ">"
+  | "<="
+  | ">=";
 export type UnaryOperator = "+" | "-";
 
 export interface BaseNode {

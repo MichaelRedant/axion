@@ -51,6 +51,15 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
       intervals.length,
   );
 
+  const engineLabel = useMemo(() => {
+    if (!result) {
+      return null;
+    }
+    return result.engine === "maxima"
+      ? t("engine.maximaBadge", "Maxima")
+      : t("engine.axionBadge", "Axion");
+  }, [result, t]);
+
   const handleFollowUp = useCallback(
     (targetStepId?: string) => {
       if (!targetStepId) {
@@ -76,19 +85,26 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     >
       <header className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("result.title")}</span>
-        {result ? (
-          <button
-            type="button"
-            className={clsx(
-              "axion-button axion-button--ghost text-xs",
-              !hasExplain && "cursor-not-allowed opacity-50",
-            )}
-            onClick={() => hasExplain && setActiveTab("explain")}
-            disabled={!hasExplain}
-          >
-            {t("result.explainButton")}
-          </button>
-        ) : null}
+        <div className="flex items-center gap-2">
+          {engineLabel ? (
+            <span className="rounded-full border border-[rgba(0,255,242,0.25)] px-3 py-1 text-[0.6rem] tracking-[0.35em] text-[rgba(255,255,255,0.7)]">
+              {engineLabel}
+            </span>
+          ) : null}
+          {result ? (
+            <button
+              type="button"
+              className={clsx(
+                "axion-button axion-button--ghost text-xs",
+                !hasExplain && "cursor-not-allowed opacity-50",
+              )}
+              onClick={() => hasExplain && setActiveTab("explain")}
+              disabled={!hasExplain}
+            >
+              {t("result.explainButton")}
+            </button>
+          ) : null}
+        </div>
       </header>
 
       {result ? (

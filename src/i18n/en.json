@@ -102,6 +102,17 @@
     "disable": "Neon off",
     "retro": "Retro keyboard"
   },
+  "engine": {
+    "title": "Engine",
+    "axionLabel": "Axion",
+    "maximaLabel": "Maxima",
+    "axionButton": "Axion core",
+    "maximaButton": "Maxima",
+    "unavailable": "Configure a Maxima server to enable this option.",
+    "available": "Requests are proxied through the Maxima bridge.",
+    "axionBadge": "Axion",
+    "maximaBadge": "Maxima"
+  },
   "clipboard": {
     "success": "Copied to clipboard"
   },

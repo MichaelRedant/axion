@@ -10,7 +10,7 @@ import type {
 } from "./types";
 
 const STORAGE_KEY = "axion-notebook";
-const CURRENT_VERSION = 3;
+const CURRENT_VERSION = 4;
 
 type LegacyNotebookCell = {
   readonly id?: string;
@@ -59,6 +59,12 @@ export function loadNotebookState(): NotebookState {
 
     if ("version" in parsed) {
       if (parsed.version === CURRENT_VERSION) {
+        const typed = parsed as NotebookSerializedState;
+        const cells = typed.cells.map(deserializeCell);
+        return { cells, selectedId: typed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
+      }
+
+      if (parsed.version === 3) {
         const typed = parsed as NotebookSerializedState;
         const cells = typed.cells.map(deserializeCell);
         return { cells, selectedId: typed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
@@ -140,10 +146,22 @@ function deserializeOutput(output: NotebookSerializedOutput): NotebookCell["outp
   }
 
   if (output.type === "success") {
-    return { type: "success", evaluation: output.evaluation } satisfies NotebookCellSuccessOutput;
+    return {
+      type: "success",
+      evaluation: {
+        ...output.evaluation,
+        engine: output.evaluation.engine ?? "axion",
+      },
+    } satisfies NotebookCellSuccessOutput;
   }
 
-  return { type: "error", error: output.error } satisfies NotebookCellErrorOutput;
+  return {
+    type: "error",
+    error: {
+      ...output.error,
+      engine: output.error.engine ?? "axion",
+    },
+  } satisfies NotebookCellErrorOutput;
 }
 
 function deserializeLegacyCell(cell: LegacyNotebookCell, index: number): NotebookCell {
@@ -153,8 +171,17 @@ function deserializeLegacyCell(cell: LegacyNotebookCell, index: number): Noteboo
 
   const output: NotebookCell["output"] =
     cell.payload.type === "success"
-      ? ({ type: "success", evaluation: cell.payload.evaluation } satisfies NotebookCellSuccessOutput)
-      : ({ type: "error", error: cell.payload.error } satisfies NotebookCellErrorOutput);
+      ? ({
+          type: "success",
+          evaluation: {
+            ...cell.payload.evaluation,
+            engine: cell.payload.evaluation.engine ?? "axion",
+          },
+        } satisfies NotebookCellSuccessOutput)
+      : ({
+          type: "error",
+          error: { ...cell.payload.error, engine: cell.payload.error.engine ?? "axion" },
+        } satisfies NotebookCellErrorOutput);
 
   return {
     id,

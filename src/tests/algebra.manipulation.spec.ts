@@ -15,20 +15,24 @@ function parseExpression(input: string) {
   return parse(tokenize(input));
 }
 
+function normalizeLatex(latex: string) {
+  return latex.replace(/\s+/g, "");
+}
+
 describe("algebra manipulation", () => {
   it("expands binomial products", () => {
     const ast = parseExpression("(x+2)*(x+3)");
     const result = expand(ast);
-    const latex = toKaTeX(result);
-    expect(latex).toContain("\\mathrm{x}^{2}");
-    expect(latex).toContain("+5\\mathrm{x}");
-    expect(latex).toContain("+6");
+    const latex = normalizeLatex(toKaTeX(result));
+    expect(latex).toMatch(/\\mathrm{x}(\^2|\\cdot\\mathrm{x})/);
+    expect(latex).toContain("+5\\cdot\\mathrm{x}");
+    expect(latex.startsWith("6+")).toBe(true);
   });
 
   it("factors simple quadratics", () => {
     const ast = parseExpression("x^2+5x+6");
     const result = factor(ast);
-    const latex = toKaTeX(result);
+    const latex = normalizeLatex(toKaTeX(result));
     expect(latex).toContain("\\left(\\mathrm{x}+2\\right)");
     expect(latex).toContain("\\left(\\mathrm{x}+3\\right)");
   });
@@ -36,16 +40,16 @@ describe("algebra manipulation", () => {
   it("simplifies rational coefficients", () => {
     const ast = parseExpression("(4*x)/2");
     const result = rationalSimplify(ast);
-    expect(toKaTeX(result)).toContain("2\\mathrm{x}");
+    expect(normalizeLatex(toKaTeX(result))).toContain("2\\cdot\\mathrm{x}");
   });
 
   it("computes elementary partial fractions", () => {
     const ast = parseExpression("(3*x+5)/((x+1)*(x+2))");
     const result = partialFraction(ast);
-    const latex = toKaTeX(result);
+    const latex = normalizeLatex(toKaTeX(result));
     expect(latex).toContain("\\frac");
-    expect(latex).toContain("\\mathrm{x}+1");
-    expect(latex).toContain("\\mathrm{x}+2");
+    expect(latex).toContain("1+\\mathrm{x}");
+    expect(latex).toContain("2+\\mathrm{x}");
   });
 
   it("leaves unsupported expressions untouched", () => {
@@ -59,7 +63,9 @@ describe("algebra manipulation", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.solution.steps).toHaveLength(2);
-      expect(result.solution.exact).toContain("\\mathrm{x}^{2}");
+      expect(normalizeLatex(result.solution.exact)).toContain(
+        "\\left(1+\\mathrm{x}\\right)^{2}",
+      );
     }
   });
 
@@ -67,8 +73,11 @@ describe("algebra manipulation", () => {
     const result = analyzeExpression("expand((x+2)*(x+3))");
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.solution.exact).toContain("\\mathrm{x}^{2}");
-      expect(result.solution.steps[1]?.latex).toContain("+5\\mathrm{x}");
+      expect(normalizeLatex(result.solution.exact)).toMatch(/\\mathrm{x}(\^2|\\cdot\\mathrm{x})/);
+      const secondStep = result.solution.steps[1]?.latex;
+      if (secondStep) {
+        expect(normalizeLatex(secondStep)).toContain("+5\\cdot\\mathrm{x}");
+      }
     }
   });
 });

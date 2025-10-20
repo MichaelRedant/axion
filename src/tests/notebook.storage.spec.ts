@@ -45,6 +45,7 @@ describe("notebook storage", () => {
 
   const successEvaluation: EvaluationSuccess = {
     ok: true,
+    engine: "axion",
     tokens: [],
     ast: sampleNode,
     simplified: sampleNode,
@@ -56,6 +57,7 @@ describe("notebook storage", () => {
 
   const errorEvaluation: EvaluationFailure = {
     ok: false,
+    engine: "axion",
     message: "error",
     position: 0,
   };
@@ -125,7 +127,7 @@ describe("notebook storage", () => {
     expect(localStorageMock.setItem).toHaveBeenCalledTimes(1);
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       "axion-notebook",
-      expect.stringContaining("\"version\":3"),
+      expect.stringContaining("\"version\":4"),
     );
 
     const reloaded = loadNotebookState();

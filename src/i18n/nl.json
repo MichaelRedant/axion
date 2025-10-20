@@ -102,6 +102,17 @@
     "disable": "Neon uit",
     "retro": "Retro toetsenbord"
   },
+  "engine": {
+    "title": "Rekenkern",
+    "axionLabel": "Axion",
+    "maximaLabel": "Maxima",
+    "axionButton": "Eigen engine",
+    "maximaButton": "Maxima",
+    "unavailable": "Configureer een Maxima-server om deze optie te gebruiken.",
+    "available": "Aanvragen verlopen via de Maxima-bridge.",
+    "axionBadge": "Axion",
+    "maximaBadge": "Maxima"
+  },
   "clipboard": {
     "success": "Gekopieerd naar klembord"
   },

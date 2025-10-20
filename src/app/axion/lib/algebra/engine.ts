@@ -1,9 +1,4 @@
 import { evaluate, isComplexResult, isUnitResult, type ComplexResult, type UnitResult } from "./evaluator";
-registerStrategy({
-  descriptor: MATRIX_STRATEGY_DESCRIPTOR,
-  factory: () => new MatrixStrategy(),
-});
-
 import { parse } from "./parser";
 import { simplify } from "./simplify";
 import { tokenize, type Token } from "./tokenizer";
@@ -35,7 +30,6 @@ import {
   MatrixStrategy,
 } from "./strategies/matrix";
 
-
 registerStrategy({
   descriptor: QUADRATIC_STRATEGY_DESCRIPTOR,
   factory: () => new QuadraticStrategy(),
@@ -52,26 +46,30 @@ registerStrategy({
   descriptor: CALCULUS_STRATEGY_DESCRIPTOR,
   factory: () => new CalculusStrategy(),
 });
-
 registerStrategy({
   descriptor: MATRIX_STRATEGY_DESCRIPTOR,
   factory: () => new MatrixStrategy(),
 });
+
+export type EvaluationEngine = "axion" | "maxima";
+
 export interface EvaluationSuccess {
-  ok: true;
-  tokens: Token[];
-  ast: Node;
-  simplified: Node;
-  solution: SolutionBundle;
-  exact: string;
-  approx: string | null;
-  approxValue: number | null;
+  readonly ok: true;
+  readonly engine: EvaluationEngine;
+  readonly tokens?: Token[];
+  readonly ast?: Node;
+  readonly simplified?: Node;
+  readonly solution: SolutionBundle;
+  readonly exact: string;
+  readonly approx: string | null;
+  readonly approxValue: number | null;
 }
 
 export interface EvaluationFailure {
-  ok: false;
-  message: string;
-  position: number;
+  readonly ok: false;
+  readonly engine: EvaluationEngine;
+  readonly message: string;
+  readonly position: number;
 }
 
 export type EvaluationResult = EvaluationSuccess | EvaluationFailure;
@@ -97,18 +95,20 @@ export function analyzeExpression(input: string): EvaluationResult {
 
     return {
       ok: true,
+      engine: "axion",
       tokens,
       ast,
       simplified,
       solution,
       exact: solution.exact,
-      approx: solution.approx,
+      approx: solution.approx ?? null,
       approxValue: solution.approxValue ?? null,
     } satisfies EvaluationSuccess;
   } catch (error) {
     if (error instanceof AxionError) {
       return {
         ok: false,
+        engine: "axion",
         message: error.message,
         position: error.position,
       } satisfies EvaluationFailure;
@@ -116,6 +116,7 @@ export function analyzeExpression(input: string): EvaluationResult {
 
     return {
       ok: false,
+      engine: "axion",
       message: "Onbekende fout",
       position: input.length,
     } satisfies EvaluationFailure;
