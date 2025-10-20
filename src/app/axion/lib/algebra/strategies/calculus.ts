@@ -1,14 +1,15 @@
-﻿import { cloneNode, type Node } from "../ast";
+import { cloneNode, type Node } from "../ast";
 import { toKaTeX } from "../format";
 import { differentiate, integrate, computeLimit, taylorSeries } from "../calculus";
 import { simplify, collectVariables } from "../simplify";
+import { evaluate, isComplexResult, isUnitResult } from "../evaluator";
 import type {
   ProblemStrategy,
   StrategyContext,
   StrategyDescriptor,
   StrategyResult,
 } from "./base";
-import type { SolutionStep } from "../solution";
+import type { CartesianPlotConfig, PlotAnnotation, SolutionStep } from "../solution";
 
 export const CALCULUS_STRATEGY_DESCRIPTOR: StrategyDescriptor = {
   id: "strategy.calculus",
@@ -25,7 +26,6 @@ export class CalculusStrategy implements ProblemStrategy {
 
   solve(context: StrategyContext): StrategyResult | null {
     if (context.ast.type !== "Call") return null;
-
     const call = context.ast;
 
     switch (call.callee) {
@@ -42,7 +42,10 @@ export class CalculusStrategy implements ProblemStrategy {
     }
   }
 
-  private handleDiff(context: StrategyContext, call: Extract<Node, { type: "Call" }> ): StrategyResult | null {
+  private handleDiff(
+    context: StrategyContext,
+    call: Extract<Node, { type: "Call" }>,
+  ): StrategyResult | null {
     const [expression, variableNode, orderNode] = call.args;
     if (!expression) return null;
 
@@ -63,10 +66,20 @@ export class CalculusStrategy implements ProblemStrategy {
       {
         id: "differentiate",
         title: `Differentieer naar ${variable}`,
-        description: order === 1 ? "Pas de standaard differentieregels toe." : `Bereken de ${order}e afgeleide stap voor stap.`,
+        description:
+          order === 1
+            ? "Pas de standaard differentieregels toe."
+            : `Bereken de ${order}e afgeleide stap voor stap.`,
         latex,
       },
     ];
+
+    const plotConfig = createCartesianPlot(
+      expression,
+      variable,
+      `f(${variable})`,
+      defaultDomain(),
+    );
 
     return {
       solution: {
@@ -84,14 +97,18 @@ export class CalculusStrategy implements ProblemStrategy {
         },
         followUps: [],
         roots: [],
-        plotConfig: null,
+        plotConfig,
       },
     };
   }
 
-  private handleIntegrate(context: StrategyContext, call: Extract<Node, { type: "Call" }> ): StrategyResult | null {
+  private handleIntegrate(
+    context: StrategyContext,
+    call: Extract<Node, { type: "Call" }>,
+  ): StrategyResult | null {
     const [expression, variableNode] = call.args;
     if (!expression) return null;
+
     const variable = this.resolveVariable(variableNode, context, expression);
     if (!variable) return null;
 
@@ -115,7 +132,12 @@ export class CalculusStrategy implements ProblemStrategy {
           rationale: "Geen gesloten primitieve gevonden voor deze uitdrukking.",
           followUps: [],
           roots: [],
-          plotConfig: null,
+          plotConfig: createCartesianPlot(
+            expression,
+            variable,
+            `f(${variable})`,
+            defaultDomain(),
+          ),
         },
       };
     }
@@ -128,16 +150,23 @@ export class CalculusStrategy implements ProblemStrategy {
       {
         id: "original",
         title: "Originele expressie",
-        description: "Integreer de ingevoerde functie.",
+        description: "Integreer naar het opgegeven variabele.",
         latex: toKaTeX(expression),
       },
       {
-        id: "integrate",
-        title: "Bepaal de primitieve",
-        description: "Gebruik standaard integratieregels.",
-        latex: exact,
+        id: "integral",
+        title: "Primitieve",
+        description: "Resultaat na integratie (zonder constante).",
+        latex: latexPrimitive,
       },
     ];
+
+    const plotConfig = createCartesianPlot(
+      simplified,
+      variable,
+      `∫ f(${variable}) d${variable}`,
+      defaultDomain(),
+    );
 
     return {
       solution: {
@@ -147,55 +176,61 @@ export class CalculusStrategy implements ProblemStrategy {
         approx: null,
         approxValue: null,
         steps,
-        rationale: "Onbepaalde integraal inclusief integratieconstante.",
+        rationale: "Symbolische integratie via bekende primitieve regels.",
         details: {
           operation: "integrate",
           variable,
         },
         followUps: [],
         roots: [],
-        plotConfig: null,
+        plotConfig,
       },
     };
   }
 
-  private handleLimit(context: StrategyContext, call: Extract<Node, { type: "Call" }> ): StrategyResult | null {
-    const [expression, secondArg, thirdArg, fourthArg] = call.args;
+  private handleLimit(
+    context: StrategyContext,
+    call: Extract<Node, { type: "Call" }>,
+  ): StrategyResult | null {
+    const [expression, variableNode, targetNode, directionNode] = call.args;
     if (!expression) return null;
-
-    let variableNode = secondArg;
-    let targetNode = thirdArg;
-    let directionNode = fourthArg;
-
-    if (secondArg && secondArg.type === "Binary" && secondArg.operator === "->") {
-      variableNode = secondArg.left;
-      targetNode = secondArg.right;
-      directionNode = thirdArg;
-    }
 
     const variable = this.resolveVariable(variableNode, context, expression);
     if (!variable) return null;
 
-    const target = targetNode && targetNode.type === "Number" ? Number(targetNode.value) : 0;
+    const target = targetNode ?? cloneNode(variableNode ?? expression);
     const direction = parseDirection(directionNode);
 
-    const limitValue = computeLimit(expression, { variable, approaching: target, direction });
-    const latexLimit = limitValue === null ? "Niet gedefinieerd" : formatNumber(limitValue);
+    const limitValue = computeLimit(expression, {
+      variable,
+      approaching: target,
+      direction,
+    });
+
+    const latexLimit = limitValue !== null ? formatNumber(limitValue) : "Niet gedefinieerd";
 
     const steps: SolutionStep[] = [
       {
         id: "original",
         title: "Originele expressie",
-        description: "Bepaal de limiet rond het gegeven punt.",
+        description: "Bereken de limiet in het opgegeven punt.",
         latex: toKaTeX(expression),
       },
       {
-        id: "evaluate",
-        title: "Evalueer limiet",
-        description: "Gebruik substitutie en eventueel L'HÃ´pital.",
+        id: "limit",
+        title: "Limiet",
+        description: `Beoordeel de limiet voor ${variable} → ${toKaTeX(target)}`,
         latex: latexLimit,
       },
     ];
+
+    const plotConfig = createCartesianPlot(
+      expression,
+      variable,
+      `f(${variable})`,
+      inferLimitDomain(target),
+      buildLimitAnnotations(expression, variable, target),
+    );
 
     return {
       solution: {
@@ -205,7 +240,7 @@ export class CalculusStrategy implements ProblemStrategy {
         approx: limitValue !== null ? formatNumber(limitValue) : null,
         approxValue: limitValue,
         steps,
-        rationale: "Limiet berekend via substitutie of L'HÃ´pital.",
+        rationale: "Limiet berekend via substitutie, rekenregels of L'Hôpital.",
         details: {
           operation: "limit",
           variable,
@@ -214,14 +249,18 @@ export class CalculusStrategy implements ProblemStrategy {
         },
         followUps: [],
         roots: [],
-        plotConfig: null,
+        plotConfig,
       },
     };
   }
 
-  private handleTaylor(context: StrategyContext, call: Extract<Node, { type: "Call" }> ): StrategyResult | null {
+  private handleTaylor(
+    context: StrategyContext,
+    call: Extract<Node, { type: "Call" }>,
+  ): StrategyResult | null {
     const [expression, variableNode, aroundNode, orderNode] = call.args;
     if (!expression) return null;
+
     const variable = this.resolveVariable(variableNode, context, expression);
     if (!variable) return null;
 
@@ -253,6 +292,14 @@ export class CalculusStrategy implements ProblemStrategy {
       },
     ];
 
+    const plotConfig = createCartesianPlot(
+      expression,
+      variable,
+      `f(${variable})`,
+      domainAround(around, 4),
+      buildTaylorAnnotations(expression, variable, around),
+    );
+
     return {
       solution: {
         type: context.descriptor.type,
@@ -270,7 +317,7 @@ export class CalculusStrategy implements ProblemStrategy {
         },
         followUps: [],
         roots: [],
-        plotConfig: null,
+        plotConfig,
       },
     };
   }
@@ -323,3 +370,108 @@ function formatNumber(value: number): string {
   return fixed.replace(/\.0+$/, "").replace(/0+$/, "");
 }
 
+function createCartesianPlot(
+  expression: Node,
+  variable: string,
+  label: string,
+  domain: [number, number],
+  annotations?: PlotAnnotation[],
+): CartesianPlotConfig {
+  const [start, end] = domain[0] < domain[1] ? domain : [domain[1], domain[0]];
+  return {
+    type: "cartesian",
+    variable,
+    expression: cloneNode(expression),
+    domain: [start, end],
+    samples: 300,
+    label,
+    axes: {
+      x: { label: variable, min: start, max: end },
+      y: { label },
+    },
+    annotations,
+  };
+}
+
+function defaultDomain(): [number, number] {
+  return [-6, 6];
+}
+
+function domainAround(center: number, span: number): [number, number] {
+  const start = center - span;
+  const end = center + span;
+  if (!Number.isFinite(start) || !Number.isFinite(end)) {
+    return defaultDomain();
+  }
+  return [start, end];
+}
+
+function inferLimitDomain(target: Node): [number, number] {
+  if (target.type === "Number") {
+    const center = Number(target.value);
+    if (Number.isFinite(center)) {
+      return domainAround(center, 3);
+    }
+  }
+  if (target.type === "Symbol") {
+    if (target.name === "infinity" || target.name === "oo") {
+      return [0, 10];
+    }
+    if (target.name === "-infinity" || target.name === "-oo") {
+      return [-10, 0];
+    }
+  }
+  return defaultDomain();
+}
+
+function evaluateAt(expression: Node, variable: string, value: number): number | null {
+  try {
+    const result = evaluate(expression, { env: { [variable]: value }, precision: 10 });
+    if (isUnitResult(result)) {
+      return result.magnitude;
+    }
+    if (isComplexResult(result)) {
+      return Math.abs(result.imaginary) < 1e-9 ? result.real : null;
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+function buildLimitAnnotations(
+  expression: Node,
+  variable: string,
+  target: Node,
+): PlotAnnotation[] | undefined {
+  if (target.type !== "Number") {
+    return undefined;
+  }
+  const value = Number(target.value);
+  if (!Number.isFinite(value)) {
+    return undefined;
+  }
+  const y = evaluateAt(expression, variable, value);
+  return [
+    {
+      type: "point",
+      coordinates: [value, Number.isFinite(y ?? NaN) ? (y as number) : 0],
+      label: `${variable} → ${formatNumber(value)}`,
+    },
+  ];
+}
+
+function buildTaylorAnnotations(
+  expression: Node,
+  variable: string,
+  around: number,
+): PlotAnnotation[] {
+  const y = evaluateAt(expression, variable, around);
+  return [
+    {
+      type: "point",
+      coordinates: [around, Number.isFinite(y ?? NaN) ? (y as number) : 0],
+      label: `Rond ${variable} = ${formatNumber(around)}`,
+    },
+  ];
+}

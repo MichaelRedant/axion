@@ -1,4 +1,5 @@
-﻿import type { BinaryNode, Node, UnaryNode } from "./ast";
+import type { BinaryNode, Node, UnaryNode } from "./ast";
+import { formatMatrix, formatVector, parseMatrixNode, parseVectorNode } from "./matrix";
 
 const BINARY_PRECEDENCE: Record<string, number> = {
   "+": 1,
@@ -79,6 +80,26 @@ function formatBinary(node: BinaryNode, parentPrecedence: number): string {
 }
 
 function formatCall(node: Extract<Node, { type: "Call" }>): string {
+  const lower = node.callee.toLowerCase();
+
+  if (lower === "matrix" || lower === "mat") {
+    try {
+      const { matrix } = parseMatrixNode(node);
+      return formatMatrix(matrix);
+    } catch {
+      // fall back to default formatting when parsing fails
+    }
+  }
+
+  if (lower === "vector" || lower === "vec") {
+    try {
+      const vector = parseVectorNode(node);
+      return formatVector(vector);
+    } catch {
+      // fall back to default formatting when parsing fails
+    }
+  }
+
   if (node.callee === "sqrt" && node.args.length === 1) {
     return `\\sqrt{${toKaTeX(node.args[0]!)}}`;
   }
@@ -110,4 +131,3 @@ function formatCallee(name: string): string {
       return `\\operatorname{${name}}`;
   }
 }
-

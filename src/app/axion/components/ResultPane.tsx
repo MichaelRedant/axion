@@ -5,7 +5,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
-import { FunctionPlot } from "./plots/FunctionPlot";
+import { PlotPanel } from "./plots/PlotPanel";
 import "../styles.css";
 
 type ResultTab = "result" | "steps" | "explain";
@@ -126,7 +126,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                   </div>
                 ) : null}
               </div>
-              {result.solution.plotConfig ? <FunctionPlot config={result.solution.plotConfig} /> : null}
+              {result.solution.plotConfig ? <PlotPanel config={result.solution.plotConfig} /> : null}
             </div>
           ) : null}
 

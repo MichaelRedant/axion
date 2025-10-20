@@ -1,4 +1,9 @@
-﻿import { evaluate, isComplexResult, isUnitResult, type ComplexResult, type UnitResult } from "./evaluator";
+import { evaluate, isComplexResult, isUnitResult, type ComplexResult, type UnitResult } from "./evaluator";
+registerStrategy({
+  descriptor: MATRIX_STRATEGY_DESCRIPTOR,
+  factory: () => new MatrixStrategy(),
+});
+
 import { parse } from "./parser";
 import { simplify } from "./simplify";
 import { tokenize, type Token } from "./tokenizer";
@@ -25,6 +30,11 @@ import {
   CALCULUS_STRATEGY_DESCRIPTOR,
   CalculusStrategy,
 } from "./strategies/calculus";
+import {
+  MATRIX_STRATEGY_DESCRIPTOR,
+  MatrixStrategy,
+} from "./strategies/matrix";
+
 
 registerStrategy({
   descriptor: QUADRATIC_STRATEGY_DESCRIPTOR,
@@ -43,6 +53,10 @@ registerStrategy({
   factory: () => new CalculusStrategy(),
 });
 
+registerStrategy({
+  descriptor: MATRIX_STRATEGY_DESCRIPTOR,
+  factory: () => new MatrixStrategy(),
+});
 export interface EvaluationSuccess {
   ok: true;
   tokens: Token[];

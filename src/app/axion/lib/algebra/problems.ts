@@ -1,4 +1,4 @@
-﻿import type { CallNode, Node } from "./ast";
+import type { CallNode, Node } from "./ast";
 
 export type ProblemType =
   | "quadratic"
@@ -43,7 +43,7 @@ export interface ProblemDescriptor {
 import { isUnitSymbol } from "./core/units";
 
 const RESERVED_SYMBOLS = new Set(["pi", "e"]);
-const MATRIX_FUNCTIONS = new Set(["matrix", "mat", "det", "adj", "inv", "inverse", "transpose", "rank"]);
+const MATRIX_FUNCTIONS = new Set(["matrix", "mat", "det", "adj", "inv", "inverse", "transpose", "rank", "matadd", "matmul", "eigen", "eig", "svd", "solveSystem", "vector", "vec"]);
 const LIMIT_FUNCTIONS = new Set(["lim", "limit"]);
 const DIFFERENTIAL_FUNCTIONS = new Set(["diff", "d", "deriv", "derivative", "integrate", "int"]);
 const PROBABILITY_FUNCTIONS = new Set(["p", "pr", "pdf", "cdf", "pmf", "binom", "comb", "ncr", "bernoulli", "poisson", "normal"]);

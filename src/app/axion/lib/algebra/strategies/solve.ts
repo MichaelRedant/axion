@@ -1,4 +1,4 @@
-﻿import Big from "big.js";
+import Big from "big.js";
 import { cloneNode, type BinaryNode, type Node } from "../ast";
 import { toKaTeX } from "../format";
 import type {
@@ -12,7 +12,7 @@ import {
   extractPolynomial,
   type Polynomial,
 } from "../simplify";
-import type { SolutionInterval, SolutionStep } from "../solution";
+import type { CartesianPlotConfig, PlotAnnotation, PlotConfig, SolutionInterval, SolutionStep } from "../solution";
 
 export const SOLVE_STRATEGY_DESCRIPTOR: StrategyDescriptor = {
   id: "strategy.solve",
@@ -106,6 +106,13 @@ export class SolveStrategy implements ProblemStrategy {
       return null;
     }
 
+    const plotConfig = buildSolvePlotConfig(
+      comparison,
+      solution,
+      variable,
+      comparison.expression,
+    );
+
     return {
       solution: {
         type: context.descriptor.type,
@@ -122,7 +129,7 @@ export class SolveStrategy implements ProblemStrategy {
         roots: solution.roots,
         intervals: solution.intervals,
         followUps: [],
-        plotConfig: null,
+        plotConfig,
       },
     };
   }
@@ -162,6 +169,102 @@ function normaliseBinary(node: BinaryNode): Node {
 
 function isComparisonOperator(value: string): value is ComparisonOperator {
   return value === "=" || value === "<" || value === "<=" || value === ">" || value === ">=";
+}
+
+function buildSolvePlotConfig(
+  comparison: Comparison,
+  solution: SolveResult,
+  primaryVariable: string,
+  expression: Node,
+): PlotConfig | null {
+  if (comparison.kind !== "equation") {
+    return null;
+  }
+
+  const variables = Array.from(collectVariables(expression));
+  if (!variables.length) {
+    return null;
+  }
+
+  if (variables.length === 1) {
+    const variable = variables[0] ?? primaryVariable;
+    const roots = extractNumericRoots(solution.roots);
+    const domain = roots.length ? expandDomainFromRoots(roots) : [-6, 6];
+    const annotations = createRootAnnotations(roots);
+    const label = `f(${variable}) = 0`;
+
+    const config: CartesianPlotConfig = {
+      type: "cartesian",
+      variable,
+      expression: cloneNode(expression),
+      domain,
+      samples: 400,
+      label,
+      axes: {
+        x: { label: variable, min: domain[0], max: domain[1] },
+        y: { label },
+      },
+      annotations,
+    };
+    return config;
+  }
+
+  if (variables.length === 2) {
+    const [xVar, yVar] = variables as [string, string];
+    const config: PlotConfig = {
+      type: "implicit",
+      expression: cloneNode(expression),
+      variables: [xVar, yVar],
+      xRange: [-6, 6],
+      yRange: [-6, 6],
+      resolution: 80,
+      label: `f(${xVar}, ${yVar}) = 0`,
+    };
+    return config;
+  }
+
+  return null;
+}
+
+function extractNumericRoots(roots: SolveResult["roots"]): number[] {
+  return roots
+    .map((root) => {
+      if (typeof root === "number") {
+        return root;
+      }
+      return Number.isFinite(root.real) && Math.abs(root.imaginary) < 1e-9 ? root.real : null;
+    })
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+}
+
+function expandDomainFromRoots(roots: number[]): [number, number] {
+  if (!roots.length) {
+    return [-6, 6];
+  }
+
+  const min = Math.min(...roots);
+  const max = Math.max(...roots);
+  const span = Math.max(max - min, 4);
+  const padding = span * 0.25;
+  const start = min - padding;
+  const end = max + padding;
+
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start === end) {
+    return [-6, 6];
+  }
+
+  return [start, end];
+}
+
+function createRootAnnotations(roots: number[]): PlotAnnotation[] | undefined {
+  if (!roots.length) {
+    return undefined;
+  }
+  return roots.map((root) => ({
+    type: "point" as const,
+    coordinates: [root, 0],
+    label: `x = ${formatNumber(root)}`,
+  }));
 }
 
 function calculateDegree(polynomial: Polynomial): number {
@@ -242,7 +345,7 @@ function solveQuadraticEquation(polynomial: Polynomial, variable: string, refere
     rationale =
       discriminant.eq(0)
         ? "De discriminant is nul, dus er is een dubbele wortel."
-        : "De discriminant is positief, dus er zijn twee reÃ«le oplossingen.";
+        : "De discriminant is positief, dus er zijn twee reële oplossingen.";
   }
 
   const steps: SolutionStep[] = [
@@ -255,7 +358,7 @@ function solveQuadraticEquation(polynomial: Polynomial, variable: string, refere
     {
       id: "discriminant",
       title: "Bereken de discriminant",
-      description: "Gebruik Î” = b^2 - 4ac.",
+      description: "Gebruik Δ = b^2 - 4ac.",
       latex: deltaLatex,
     },
     {
@@ -433,8 +536,8 @@ function solveQuadraticInequality(polynomial: Polynomial, variable: string, oper
       title: "Bepaal de kritieke punten",
       description: realRoots.length
         ? "Los de bijbehorende vergelijking op om de nulpunten te bepalen."
-        : "Er zijn geen reÃ«le nulpunten.",
-      latex: realRoots.length ? realRoots.map((root) => root.latex).join(", ") : "Geen reÃ«le nulpunten",
+        : "Er zijn geen reële nulpunten.",
+      latex: realRoots.length ? realRoots.map((root) => root.latex).join(", ") : "Geen reële nulpunten",
     },
     {
       id: "intervals",
@@ -458,14 +561,14 @@ function solveQuadraticInequality(polynomial: Polynomial, variable: string, oper
 
 function buildQuadraticInequalityRationale(discriminant: Big, operator: ComparisonOperator): string {
   if (discriminant.lt(0)) {
-    return "De discriminant is negatief, dus er zijn geen reÃ«le nulpunten. De ongelijkheid hangt af van het teken van de parabool.";
+    return "De discriminant is negatief, dus er zijn geen reële nulpunten. De ongelijkheid hangt af van het teken van de parabool.";
   }
   if (discriminant.eq(0)) {
     return operator.includes("=")
       ? "De discriminant is nul, er is een dubbel nulpunt. De ongelijkheid is waar op dat punt en afhankelijk van het teken van de parabool elders."
       : "De discriminant is nul, er is een dubbel nulpunt. Zonder gelijkheid is de ongelijkheid nergens strikt geldig.";
   }
-  return "Met twee reÃ«le nulpunten verandert het teken van de parabool in de intervallen tussen de nulpunten.";
+  return "Met twee reële nulpunten verandert het teken van de parabool in de intervallen tussen de nulpunten.";
 }
 
 function createComplexRoots(real: number, imaginary: number): ComplexRoot[] {
@@ -760,9 +863,9 @@ function solveHigherOrderInequality(
       id: "roots",
       title: "Bepaal kritieke punten",
       description: realRoots.length
-        ? "Vind de reÃ«le nulpunten numeriek."
-        : "Er zijn geen reÃ«le nulpunten.",
-      latex: realRoots.length ? realRoots.map((root) => root.latex).join(",\\; ") : "Geen reÃ«le nulpunten",
+        ? "Vind de reële nulpunten numeriek."
+        : "Er zijn geen reële nulpunten.",
+      latex: realRoots.length ? realRoots.map((root) => root.latex).join(",\\; ") : "Geen reële nulpunten",
     },
     {
       id: "intervals",
@@ -776,7 +879,7 @@ function solveHigherOrderInequality(
   const rationale =
     realRoots.length > 0
       ? "Numerieke wortels bepalen de grenzen waar het teken verandert; evalueer per interval."
-      : "Zonder reÃ«le wortels blijft het teken van het polynoom constant.";
+      : "Zonder reële wortels blijft het teken van het polynoom constant.";
 
   return {
     exact,
