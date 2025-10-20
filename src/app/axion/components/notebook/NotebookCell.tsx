@@ -40,6 +40,25 @@ interface NotebookCellProps {
 
 type Ref = NotebookCellHandle;
 
+const RESULT_BADGE_STYLES = {
+  idle: {
+    container: "border-[rgba(255,255,255,0.25)] text-[rgba(255,255,255,0.65)]",
+    dot: "bg-[rgba(255,255,255,0.65)]",
+  },
+  running: {
+    container: "border-[rgba(255,184,0,0.4)] text-[#ffb347]",
+    dot: "bg-[#ffb347]",
+  },
+  success: {
+    container: "border-[rgba(0,255,242,0.35)] text-[rgba(181,255,248,0.95)]",
+    dot: "bg-[rgba(0,255,242,0.85)]",
+  },
+  error: {
+    container: "border-[rgba(255,84,110,0.45)] text-[#ff8597]",
+    dot: "bg-[#ff4f75]",
+  },
+} as const;
+
 export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
   (
     {
@@ -122,6 +141,44 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
 
     const showStatus = cell.type === "math" && cell.status !== "idle";
 
+    const resultBadge = useMemo(() => {
+      if (cell.type !== "math") {
+        return null;
+      }
+
+      const badgeType = (() => {
+        if (cell.status === "running") {
+          return "running" as const;
+        }
+        if (cell.output?.type === "error" || cell.status === "error") {
+          return "error" as const;
+        }
+        if (cell.output?.type === "success" || cell.status === "success") {
+          return "success" as const;
+        }
+        return "idle" as const;
+      })();
+
+      const label = (() => {
+        switch (badgeType) {
+          case "running":
+            return t("notebook.running", "Evaluating…");
+          case "error":
+            return t("notebook.error", "Error");
+          case "success":
+            return t("notebook.success", "Success");
+          case "idle":
+          default:
+            return t("notebook.idle", "Idle");
+        }
+      })();
+
+      return {
+        label,
+        styles: RESULT_BADGE_STYLES[badgeType],
+      };
+    }, [cell.output?.type, cell.status, cell.type, t]);
+
     const cellHeading =
       cell.type === "math"
         ? t("notebook.cellHeading", "Cell {{index}}", { index: index + 1 })
@@ -169,9 +226,25 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
               selected={isSelected}
             />
             <section className="space-y-3">
-              <h3 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
-                {t("notebook.outputHeading", "Output")}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
+                  {t("notebook.outputHeading", "Output")}
+                </h3>
+                {resultBadge ? (
+                  <span
+                    className={clsx(
+                      "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-[0.2em]",
+                      resultBadge.styles.container,
+                    )}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={clsx("block h-1.5 w-1.5 rounded-full", resultBadge.styles.dot)}
+                    />
+                    {resultBadge.label}
+                  </span>
+                ) : null}
+              </div>
               {cell.output?.type === "success" ? (
                 <div className="space-y-2 text-base" data-testid={`notebook-output-${cell.id}`}>
                   {exactHtml ? (
