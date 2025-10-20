@@ -5,7 +5,6 @@ import { AxionHero } from "./components/AxionHero";
 import { CalcInput, type CalcInputHandle } from "./components/CalcInput";
 import { Keypad } from "./components/Keypad";
 import { ResultPane } from "./components/ResultPane";
-import { HistoryPane } from "./components/HistoryPane";
 import { HelpModal, type HelpModalHandle } from "./components/HelpModal";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { LanguageProvider, useI18n, type Locale } from "./lib/i18n/context";
@@ -15,8 +14,10 @@ import {
   type EvaluationFailure,
   type EvaluationSuccess,
 } from "./lib/algebra/engine";
-import { addEntry, createEntry, togglePin, type HistoryState } from "./lib/utils/history";
 import type { ShortcutAction } from "./lib/utils/keyboard";
+import { NotebookPane } from "./components/NotebookPane";
+import { useNotebook } from "./lib/notebook/useNotebook";
+import { exportNotebookToMarkdown } from "./lib/notebook/export";
 import "./styles.css";
 
 const THEME_STORAGE_KEY = "axion-theme"; // legacy key, kept for backward compatibility
@@ -42,7 +43,7 @@ function AxionShell() {
   const katex = useKatex();
 
   const [input, setInput] = useState("");
-  const [history, setHistory] = useState<HistoryState>({ entries: [] });
+  const [notebook, notebookActions] = useNotebook();
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
   const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
@@ -93,26 +94,20 @@ function AxionShell() {
     if (evaluation.ok) {
       setResult(evaluation);
       setError(null);
-      setHistory((state) =>
-        addEntry(
-          state,
-          createEntry({
-            input,
-            exact: evaluation.exact,
-            approx: evaluation.approx,
-          }),
-        ),
-      );
+      notebookActions.appendSuccess(input, evaluation);
       historyCursorRef.current = null;
     } else {
       setResult(null);
       setError(evaluation);
+      notebookActions.appendError(input, evaluation);
     }
-  }, [input, t]);
+  }, [input, notebookActions, t]);
 
   const navigateHistory = useCallback(
     (direction: HistoryDirection) => {
-      const navigable = history.entries.filter((entry) => !entry.pinned);
+      const navigable = notebook.cells.filter(
+        (cell) => cell.payload.type === "success" && !cell.pinned,
+      );
       if (!navigable.length) return;
 
       let cursor = historyCursorRef.current;
@@ -125,8 +120,8 @@ function AxionShell() {
           cursor = Math.min(cursor + 1, navigable.length - 1);
         }
 
-        const entry = navigable[cursor]!;
-        setInput(entry.input);
+        const cell = navigable[cursor]!;
+        setInput(cell.input);
         historyCursorRef.current = cursor;
         requestAnimationFrame(() => inputRef.current?.focus());
         return;
@@ -144,12 +139,12 @@ function AxionShell() {
       }
 
       cursor -= 1;
-      const entry = navigable[cursor]!;
-      setInput(entry.input);
+      const cell = navigable[cursor]!;
+      setInput(cell.input);
       historyCursorRef.current = cursor;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [history.entries, input],
+    [input, notebook.cells],
   );
 
   const toggleTheme = useCallback(
@@ -196,37 +191,68 @@ function AxionShell() {
 
   const handleRestore = useCallback(
     (id: string) => {
-      const entry = history.entries.find((item) => item.id === id);
-      if (!entry) return;
-      setInput(entry.input);
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell) return;
+      setInput(cell.input);
       setResult(null);
       setError(null);
       historyCursorRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [history.entries],
+    [notebook.cells],
   );
 
   const handleCopy = useCallback(
     async (id: string) => {
-      const entry = history.entries.find((item) => item.id === id);
-      if (!entry || typeof navigator === "undefined" || !navigator.clipboard) {
+      const cell = notebook.cells.find((item) => item.id === id);
+      if (!cell || typeof navigator === "undefined" || !navigator.clipboard) {
         return;
       }
-      const approxText = entry.approx ?? "n/a";
-      const payload = `${entry.input}\nExact: ${entry.exact}\n~= ${approxText}`;
+      if (cell.payload.type !== "success") {
+        const payload = `${cell.input}\nError: ${cell.payload.error.message}`;
+        await navigator.clipboard.writeText(payload);
+        setClipboardStatus(t("clipboard.success"));
+        return;
+      }
+
+      const approxText = cell.payload.evaluation.approx ?? "n/a";
+      const payload = `${cell.input}\nExact: ${cell.payload.evaluation.exact}\n~= ${approxText}`;
       await navigator.clipboard.writeText(payload);
       setClipboardStatus(t("clipboard.success"));
     },
-    [history.entries, t],
+    [notebook.cells, t],
   );
 
   const handlePin = useCallback(
     (id: string) => {
-      setHistory((state) => togglePin(state, id));
+      notebookActions.togglePin(id);
     },
-    [],
+    [notebookActions],
   );
+
+  const handleRemove = useCallback(
+    (id: string) => {
+      notebookActions.remove(id);
+    },
+    [notebookActions],
+  );
+
+  const handleReorder = useCallback(
+    (sourceId: string, targetId: string) => {
+      notebookActions.reorder(sourceId, targetId);
+    },
+    [notebookActions],
+  );
+
+  const handleExportNotebook = useCallback(async () => {
+    try {
+      await exportNotebookToMarkdown(notebook.cells);
+      setClipboardStatus(t("notebook.exported", "Notebook geëxporteerd"));
+    } catch (error) {
+      console.warn("Failed to export notebook", error);
+      setClipboardStatus(t("notebook.exportError", "Export mislukt"));
+    }
+  }, [notebook.cells, t]);
 
   const handleLocaleChange = useCallback(
     (nextLocale: Locale) => {
@@ -347,11 +373,14 @@ function AxionShell() {
           />
         </div>
         <div className="order-4 xl:order-none xl:col-span-5 xl:row-start-2">
-          <HistoryPane
-            entries={history.entries}
+          <NotebookPane
+            cells={notebook.cells}
             onRestore={handleRestore}
-            onPin={handlePin}
             onCopy={handleCopy}
+            onTogglePin={handlePin}
+            onRemove={handleRemove}
+            onReorder={handleReorder}
+            onExportMarkdown={handleExportNotebook}
             katex={katex}
             statusMessage={clipboardStatus}
           />
