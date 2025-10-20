@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import clsx from "clsx";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
@@ -19,7 +19,9 @@ interface ResultPaneProps {
 
 export function ResultPane({ result, error, expression, katex }: ResultPaneProps) {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<ResultTab>("result");
+  const [activeTab, setActiveTab] = useState<ResultTab>(() =>
+    hasExplainContent(result) ? "explain" : "result",
+  );
   const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
 
   const exactHtml = useMemo(() => {
@@ -36,20 +38,23 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   const detailEntries = useMemo(() => {
     if (!result?.solution.details) return [] as Array<[string, unknown]>;
     return Object.entries(result.solution.details);
-  }, [result?.solution.details]);
+  }, [result]);
 
-  const followUps = useMemo(() => result?.solution.followUps ?? [], [result?.solution.followUps]);
-  const intervals = useMemo(() => result?.solution.intervals ?? [], [result?.solution.intervals]);
+  const followUps = useMemo(() => result?.solution.followUps ?? [], [result]);
+  const intervals = useMemo(() => result?.solution.intervals ?? [], [result]);
 
   const hasApprox = Boolean(result?.solution.approx);
   const hasSteps = Boolean(result?.solution.steps.length);
-  const hasExplain = Boolean(
-    result?.solution.rationale ||
-      detailEntries.length ||
-      result?.solution.roots?.length ||
-      followUps.length ||
-      intervals.length,
-  );
+  const hasExplain = useMemo(() => hasExplainContent(result), [result]);
+
+  useEffect(() => {
+    if (!result) {
+      setActiveTab("result");
+      return;
+    }
+
+    setActiveTab(hasExplainContent(result) ? "explain" : "result");
+  }, [result]);
 
   const engineLabel = useMemo(() => {
     if (!result) {
@@ -300,4 +305,26 @@ function buildCaretLine(expression: string, position: number): string {
   const safePosition = Math.max(0, Math.min(position, expression.length));
   const prefix = " ".repeat(safePosition);
   return `${prefix}^`;
+}
+
+function hasExplainContent(result: EvaluationSuccess | null): boolean {
+  if (!result) {
+    return false;
+  }
+
+  const {
+    rationale,
+    details,
+    roots,
+    followUps,
+    intervals,
+  } = result.solution;
+
+  return Boolean(
+    rationale ||
+      (details && Object.keys(details).length > 0) ||
+      roots?.length ||
+      followUps?.length ||
+      intervals?.length,
+  );
 }
