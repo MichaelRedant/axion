@@ -47,8 +47,7 @@ function AxionShell() {
   const [notebook, notebookActions] = useNotebook();
   const [result, setResult] = useState<EvaluationSuccess | null>(null);
   const [error, setError] = useState<EvaluationFailure | null>(null);
-  const editingCellIdRef = useRef<string | null>(null);
-  const [clipboardStatus, setClipboardStatus] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [theme, setThemeState] = useState("neon");
 
   const inputRef = useRef<CalcInputHandle | null>(null);
@@ -79,25 +78,24 @@ function AxionShell() {
   }, [theme]);
 
   useEffect(() => {
-    if (!clipboardStatus) return;
-    const timeout = window.setTimeout(() => setClipboardStatus(null), 2400);
+    if (!statusMessage) return;
+    const timeout = window.setTimeout(() => setStatusMessage(null), 2400);
     return () => window.clearTimeout(timeout);
-  }, [clipboardStatus]);
+  }, [statusMessage]);
 
   const evaluateExpression = useCallback(() => {
     if (!input.trim()) {
       setResult(null);
       setError({ ok: false, message: t("errors.empty"), position: 0 });
-      editingCellIdRef.current = null;
+      setEditingCellId(null);
       return;
     }
 
     const evaluation = analyzeExpression(input);
 
-    const editingCellId = editingCellIdRef.current;
     if (editingCellId) {
       notebookActions.replaceInput(editingCellId, input);
-      editingCellIdRef.current = null;
+      setEditingCellId(null);
     }
 
     if (evaluation.ok) {
@@ -110,7 +108,7 @@ function AxionShell() {
       setError(evaluation);
       notebookActions.appendError(input, evaluation);
     }
-  }, [editingCellIdRef, input, notebookActions, t]);
+  }, [editingCellId, input, notebookActions, setEditingCellId, t]);
 
   const navigateHistory = useCallback(
     (direction: HistoryDirection) => {
@@ -121,7 +119,7 @@ function AxionShell() {
 
       let cursor = historyCursorRef.current;
 
-      editingCellIdRef.current = null;
+      setEditingCellId(null);
 
       if (direction === "prev") {
         if (cursor === null) {
@@ -155,7 +153,7 @@ function AxionShell() {
       historyCursorRef.current = cursor;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [editingCellIdRef, input, notebook.cells],
+    [input, notebook.cells, setEditingCellId],
   );
 
   const toggleTheme = useCallback(
@@ -180,7 +178,7 @@ function AxionShell() {
           setResult(null);
           setError(null);
           historyCursorRef.current = null;
-          editingCellIdRef.current = null;
+          setEditingCellId(null);
           break;
         case "historyPrev":
           navigateHistory("prev");
@@ -198,7 +196,7 @@ function AxionShell() {
           break;
       }
     },
-    [editingCellIdRef, evaluateExpression, navigateHistory, toggleTheme],
+    [evaluateExpression, navigateHistory, setEditingCellId, toggleTheme],
   );
 
   const loadCellIntoInput = useCallback(
@@ -216,20 +214,20 @@ function AxionShell() {
     (id: string) => {
       const cell = notebook.cells.find((item) => item.id === id);
       if (!cell) return;
-      editingCellIdRef.current = null;
+      setEditingCellId(null);
       loadCellIntoInput(cell);
     },
-    [editingCellIdRef, loadCellIntoInput, notebook.cells],
+    [loadCellIntoInput, notebook.cells],
   );
 
   const handleDuplicateAndEdit = useCallback(
     (id: string) => {
       const cell = notebook.cells.find((item) => item.id === id);
       if (!cell) return;
-      editingCellIdRef.current = id;
+      setEditingCellId(id);
       loadCellIntoInput(cell);
     },
-    [editingCellIdRef, loadCellIntoInput, notebook.cells],
+    [loadCellIntoInput, notebook.cells],
   );
 
   const handleCopy = useCallback(
@@ -241,14 +239,14 @@ function AxionShell() {
       if (cell.payload.type !== "success") {
         const payload = `${cell.input}\nError: ${cell.payload.error.message}`;
         await navigator.clipboard.writeText(payload);
-        setClipboardStatus(t("clipboard.success"));
+        setStatusMessage(t("clipboard.success"));
         return;
       }
 
       const approxText = cell.payload.evaluation.approx ?? "n/a";
       const payload = `${cell.input}\nExact: ${cell.payload.evaluation.exact}\n~= ${approxText}`;
       await navigator.clipboard.writeText(payload);
-      setClipboardStatus(t("clipboard.success"));
+      setStatusMessage(t("clipboard.success"));
     },
     [notebook.cells, t],
   );
@@ -277,12 +275,17 @@ function AxionShell() {
   const handleExportNotebook = useCallback(async () => {
     try {
       await exportNotebookToMarkdown(notebook.cells);
-      setClipboardStatus(t("notebook.exported", "Notebook geëxporteerd"));
+      setStatusMessage(t("notebook.exported", "Notebook geëxporteerd"));
     } catch (error) {
       console.warn("Failed to export notebook", error);
-      setClipboardStatus(t("notebook.exportError", "Export mislukt"));
+      setStatusMessage(t("notebook.exportError", "Export mislukt"));
     }
   }, [notebook.cells, t]);
+
+  const handleClearUnpinned = useCallback(() => {
+    notebookActions.clearUnpinned();
+    setStatusMessage(t("notebook.cleared", "Niet-vastgezette notities verwijderd"));
+  }, [notebookActions, t]);
 
   const handleLocaleChange = useCallback(
     (nextLocale: Locale) => {
@@ -307,14 +310,14 @@ function AxionShell() {
 
   const handleExample = useCallback(
     (example: string) => {
-      editingCellIdRef.current = null;
+      setEditingCellId(null);
       setInput(example);
       setResult(null);
       setError(null);
       historyCursorRef.current = null;
       requestAnimationFrame(() => inputRef.current?.focus());
     },
-    [editingCellIdRef],
+    [setEditingCellId],
   );
 
   return (
@@ -413,8 +416,9 @@ function AxionShell() {
             onRemove={handleRemove}
             onReorder={handleReorder}
             onExportMarkdown={handleExportNotebook}
+            onClearUnpinned={handleClearUnpinned}
             katex={katex}
-            statusMessage={clipboardStatus}
+            statusMessage={statusMessage}
           />
         </div>
       </section>
