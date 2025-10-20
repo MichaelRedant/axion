@@ -24,7 +24,14 @@
     "explainButton": "Explain mode",
     "followUps": "Explain actions",
     "followUpHint": "Jump to the relevant derivation step.",
-    "intervals": "Intervals"
+    "intervals": "Intervals",
+    "openExplain": "Open Explain",
+    "rationaleHeading": "Why this works",
+    "rationaleMethod": "Method",
+    "rationaleValidWhen": "Valid when",
+    "rationaleCaution": "Caution",
+    "rationaleNotes": "Key takeaways",
+    "rationaleMore": "More detail lives in Explain mode."
   },
   "history": {
     "title": "History",
