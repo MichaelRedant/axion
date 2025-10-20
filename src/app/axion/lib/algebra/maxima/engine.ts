@@ -1,7 +1,7 @@
 import type { EvaluationResult } from "../engine";
 import type { ProblemDescriptor } from "../problems";
 import { analyzeProblem } from "../problems";
-import type { SolutionBundle } from "../solution";
+import type { SolutionBundle, SolutionStep } from "../solution";
 import { simplify } from "../simplify";
 import { parse } from "../parser";
 import { tokenize } from "../tokenizer";
@@ -102,6 +102,8 @@ function buildMaximaSolution(
     details.metadata = payload.metadata;
   }
 
+  const steps = normalizeMaximaSteps(payload.steps);
+
   if (payload.steps?.length) {
     details.steps = payload.steps;
   }
@@ -112,12 +114,179 @@ function buildMaximaSolution(
     exact: exactLatex,
     approx: payload.approx ?? null,
     approxValue,
-    steps: [],
+    steps,
     plotConfig: null,
     followUps: [],
     rationale: payload.diagnostics.length ? payload.diagnostics.join("\n") : undefined,
     details,
   } satisfies SolutionBundle;
+}
+
+function normalizeMaximaSteps(rawSteps: unknown): SolutionStep[] {
+  if (!Array.isArray(rawSteps)) {
+    return [];
+  }
+
+  return rawSteps
+    .map((entry, index) => normalizeMaximaStep(entry, index))
+    .filter((step): step is SolutionStep => step !== null);
+}
+
+function normalizeMaximaStep(entry: unknown, index: number): SolutionStep | null {
+  const fallbackId = `maxima-step-${index + 1}`;
+
+  if (entry === null || entry === undefined) {
+    return null;
+  }
+
+  if (typeof entry === "string" || typeof entry === "number" || typeof entry === "boolean") {
+    const description = toStepString(entry);
+    if (!description) {
+      return null;
+    }
+    return {
+      id: fallbackId,
+      title: `Step ${index + 1}`,
+      description,
+    } satisfies SolutionStep;
+  }
+
+  if (Array.isArray(entry)) {
+    const description = toStepString(entry);
+    if (!description) {
+      return null;
+    }
+    return {
+      id: fallbackId,
+      title: `Step ${index + 1}`,
+      description,
+    } satisfies SolutionStep;
+  }
+
+  if (typeof entry !== "object") {
+    return null;
+  }
+
+  const record = entry as Record<string, unknown>;
+  const id =
+    readStepField(record, ["id", "stepId", "key"]) ??
+    fallbackId;
+  const title =
+    readStepField(record, ["title", "label", "name", "heading", "summary"]) ??
+    `Step ${index + 1}`;
+  const description =
+    readStepField(record, [
+      "description",
+      "body",
+      "text",
+      "detail",
+      "explanation",
+      "content",
+      "message",
+      "note",
+      "value",
+    ]) ??
+    readStepList(record, ["lines", "bullets", "items", "steps"]);
+  const latex = readStepField(record, ["latex", "tex", "katex", "math"]);
+  const expression = readStepField(record, ["expression", "code", "input", "raw", "command"]);
+
+  if (!description && !latex && !expression) {
+    return null;
+  }
+
+  const step: SolutionStep = {
+    id,
+    title,
+    description: description ?? "",
+  };
+
+  if (latex) {
+    step.latex = latex;
+  }
+
+  if (expression) {
+    step.expression = expression;
+  }
+
+  return step;
+}
+
+function readStepField(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    if (!(key in record)) {
+      continue;
+    }
+    const value = record[key];
+    const text = toStepString(value);
+    if (text) {
+      return text;
+    }
+  }
+  return null;
+}
+
+function readStepList(record: Record<string, unknown>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    const parts = value
+      .map((item) => toStepString(item))
+      .filter((part): part is string => Boolean(part));
+    if (parts.length) {
+      return parts.join("\n");
+    }
+  }
+  return null;
+}
+
+function toStepString(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  }
+
+  if (typeof value === "number" || typeof value === "bigint") {
+    return String(value);
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "true" : "false";
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => toStepString(item))
+      .filter((part): part is string => Boolean(part));
+    if (parts.length) {
+      return parts.join("\n");
+    }
+    return null;
+  }
+
+  if (typeof value === "object") {
+    const nested = value as Record<string, unknown>;
+    for (const key of ["text", "description", "value", "content"]) {
+      if (!(key in nested)) {
+        continue;
+      }
+      const candidate = nested[key];
+      if (candidate === value) {
+        continue;
+      }
+      const text = toStepString(candidate);
+      if (text) {
+        return text;
+      }
+    }
+  }
+
+  return null;
 }
 
 function buildMaximaDescriptor(): ProblemDescriptor {
