@@ -24,6 +24,7 @@
     "explainButton": "Explain mode",
     "followUps": "Explain actions",
     "followUpHint": "Jump to the relevant derivation step.",
+    "unreadExplainBadge": "New explain details available",
     "intervals": "Intervals",
     "openExplain": "Open Explain",
     "rationaleHeading": "Why this works",

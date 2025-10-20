@@ -2,6 +2,7 @@
 
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { EvaluationFailure, EvaluationSuccess } from "../lib/algebra/engine";
 import type {
   SolutionRationale,
@@ -26,6 +27,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   const [activeTab, setActiveTab] = useState<ResultTab>(() =>
     hasExplainContent(result) ? "explain" : "result",
   );
+  const [hasUnreadFollowUps, setHasUnreadFollowUps] = useState(false);
   const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
 
   const exactHtml = useMemo(() => {
@@ -70,11 +72,27 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   useEffect(() => {
     if (!result) {
       setActiveTab("result");
+      setHasUnreadFollowUps(false);
       return;
     }
 
     setActiveTab(hasExplainContent(result) ? "explain" : "result");
   }, [result]);
+
+  useEffect(() => {
+    if (!result) {
+      setHasUnreadFollowUps(false);
+      return;
+    }
+
+    setHasUnreadFollowUps(Boolean(followUps.length));
+  }, [result, followUps]);
+
+  useEffect(() => {
+    if (activeTab === "explain") {
+      setHasUnreadFollowUps(false);
+    }
+  }, [activeTab]);
 
   const engineLabel = useMemo(() => {
     if (!result) {
@@ -137,7 +155,23 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
           <nav className="axion-tablist flex flex-wrap gap-2 text-xs uppercase tracking-[0.3em]">
             <TabButton label="Result" active={activeTab === "result"} onClick={() => setActiveTab("result")} />
             <TabButton label="Steps" active={activeTab === "steps"} disabled={!hasSteps} onClick={() => setActiveTab("steps")} />
-            <TabButton label="Explain" active={activeTab === "explain"} disabled={!hasExplain} onClick={() => setActiveTab("explain")} />
+            <TabButton
+              label="Explain"
+              active={activeTab === "explain"}
+              disabled={!hasExplain}
+              onClick={() => setActiveTab("explain")}
+              indicator={
+                hasExplain && hasUnreadFollowUps ? (
+                  <span className="relative ml-2 flex h-2 w-2 items-center justify-center">
+                    <span className="sr-only">{t("result.unreadExplainBadge", "New explain details available")}</span>
+                    <span
+                      aria-hidden
+                      className="h-2 w-2 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(255,196,0,0.8)]"
+                    />
+                  </span>
+                ) : null
+              }
+            />
           </nav>
 
           {activeTab === "result" ? (
@@ -436,11 +470,13 @@ function TabButton({
   active,
   disabled,
   onClick,
+  indicator,
 }: {
   label: string;
   active: boolean;
   disabled?: boolean;
   onClick: () => void;
+  indicator?: ReactNode;
 }) {
   return (
     <button
@@ -453,7 +489,10 @@ function TabButton({
         disabled && "axion-tab--disabled",
       )}
     >
-      {label}
+      <span className="inline-flex items-center gap-2">
+        {label}
+        {indicator}
+      </span>
     </button>
   );
 }
