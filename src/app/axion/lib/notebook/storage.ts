@@ -1,44 +1,76 @@
 import { nanoid } from "nanoid";
 import type {
   NotebookCell,
+  NotebookCellErrorOutput,
+  NotebookCellSuccessOutput,
   NotebookSerializedCell,
-  NotebookSerializedPayload,
+  NotebookSerializedOutput,
   NotebookSerializedState,
   NotebookState,
 } from "./types";
 
 const STORAGE_KEY = "axion-notebook";
-const CURRENT_VERSION = 1;
+const CURRENT_VERSION = 2;
+
+type LegacyNotebookCell = {
+  readonly id?: string;
+  readonly input: string;
+  readonly createdAt?: number;
+  readonly updatedAt?: number;
+  readonly status?: "success" | "error";
+  readonly pinned?: boolean;
+  readonly payload:
+    | { readonly type: "success"; readonly evaluation: NotebookCellSuccessOutput["evaluation"] }
+    | { readonly type: "error"; readonly error: NotebookCellErrorOutput["error"] };
+};
+
+type LegacySerializedState = {
+  readonly version: number;
+  readonly cells: LegacyNotebookCell[];
+};
 
 export function loadNotebookState(): NotebookState {
   if (typeof window === "undefined") {
-    return { cells: [] };
+    return { cells: [], selectedId: null };
   }
 
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) {
-      return { cells: [] };
+      return { cells: [], selectedId: null };
     }
 
-    const parsed = JSON.parse(raw) as NotebookSerializedState | NotebookCell[];
+    const parsed = JSON.parse(raw) as
+      | NotebookSerializedState
+      | LegacySerializedState
+      | LegacyNotebookCell[];
 
     if (Array.isArray(parsed)) {
-      return { cells: parsed.map(deserializeCellLegacy) };
+      const cells = parsed.map((cell, index) => deserializeLegacyCell(cell, index));
+      return {
+        cells,
+        selectedId: cells[0]?.id ?? null,
+      } satisfies NotebookState;
     }
 
-    if (typeof parsed !== "object" || parsed === null) {
-      return { cells: [] };
+    if (!parsed || typeof parsed !== "object") {
+      return { cells: [], selectedId: null };
     }
 
-    if (parsed.version !== CURRENT_VERSION) {
-      return { cells: parsed.cells.map(deserializeCell) };
+    if ("version" in parsed && parsed.version === CURRENT_VERSION) {
+      const cells = parsed.cells.map(deserializeCell);
+      return { cells, selectedId: parsed.selectedId ?? cells[0]?.id ?? null } satisfies NotebookState;
     }
 
-    return { cells: parsed.cells.map(deserializeCell) };
+    if ("version" in parsed && parsed.version === 1) {
+      const cells = parsed.cells.map((cell, index) => deserializeLegacyCell(cell, index));
+      return { cells, selectedId: cells[0]?.id ?? null } satisfies NotebookState;
+    }
+
+    return { cells: [], selectedId: null } satisfies NotebookState;
   } catch (error) {
     console.warn("Failed to load notebook state", error);
-    return { cells: [] };
+    return { cells: [], selectedId: null } satisfies NotebookState;
   }
 }
 
@@ -49,8 +81,9 @@ export function persistNotebookState(state: NotebookState) {
 
   const serializable: NotebookSerializedState = {
     version: CURRENT_VERSION,
+    selectedId: state.selectedId,
     cells: state.cells.map(serializeCell),
-  };
+  } satisfies NotebookSerializedState;
 
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializable));
@@ -62,49 +95,58 @@ export function persistNotebookState(state: NotebookState) {
 function serializeCell(cell: NotebookCell): NotebookSerializedCell {
   return {
     ...cell,
-    payload: serializePayload(cell.payload),
-  };
+    output: cell.output ? serializeOutput(cell.output) : null,
+  } satisfies NotebookSerializedCell;
 }
 
-function serializePayload(payload: NotebookCell["payload"]): NotebookSerializedPayload {
-  if (payload.type === "success") {
-    return {
-      type: "success",
-      evaluation: payload.evaluation,
-    };
+function serializeOutput(output: NotebookCellSuccessOutput | NotebookCellErrorOutput): NotebookSerializedOutput {
+  if (output.type === "success") {
+    return { type: "success", evaluation: output.evaluation } satisfies NotebookCellSuccessOutput;
   }
 
-  return {
-    type: "error",
-    error: payload.error,
-  };
+  if (output.type === "error") {
+    return { type: "error", error: output.error } satisfies NotebookCellErrorOutput;
+  }
+
+  return output;
 }
 
 function deserializeCell(serialized: NotebookSerializedCell): NotebookCell {
   return {
     ...serialized,
-    payload: deserializePayload(serialized.payload),
-  };
+    output: serialized.output ? deserializeOutput(serialized.output) : null,
+  } satisfies NotebookCell;
 }
 
-function deserializePayload(payload: NotebookSerializedPayload): NotebookCell["payload"] {
-  if (payload.type === "success") {
-    return {
-      type: "success",
-      evaluation: payload.evaluation,
-    };
+function deserializeOutput(output: NotebookSerializedOutput): NotebookCell["output"] {
+  if (!output) {
+    return null;
   }
 
-  return {
-    type: "error",
-    error: payload.error,
-  };
+  if (output.type === "success") {
+    return { type: "success", evaluation: output.evaluation } satisfies NotebookCellSuccessOutput;
+  }
+
+  return { type: "error", error: output.error } satisfies NotebookCellErrorOutput;
 }
 
-function deserializeCellLegacy(cell: NotebookCell): NotebookCell {
-  // Legacy entries may have missing identifiers; ensure they exist.
+function deserializeLegacyCell(cell: LegacyNotebookCell, index: number): NotebookCell {
+  const now = Date.now();
+  const id = cell.id ?? nanoid();
+  const status = cell.status ?? (cell.payload.type === "success" ? "success" : "error");
+
+  const output: NotebookCell["output"] =
+    cell.payload.type === "success"
+      ? ({ type: "success", evaluation: cell.payload.evaluation } satisfies NotebookCellSuccessOutput)
+      : ({ type: "error", error: cell.payload.error } satisfies NotebookCellErrorOutput);
+
   return {
-    ...cell,
-    id: cell.id ?? nanoid(),
-  };
+    id,
+    order: index,
+    input: cell.input,
+    createdAt: cell.createdAt ?? now,
+    updatedAt: cell.updatedAt ?? now,
+    status,
+    output,
+  } satisfies NotebookCell;
 }

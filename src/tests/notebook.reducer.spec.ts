@@ -1,17 +1,11 @@
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import type { EvaluationFailure, EvaluationSuccess } from "../app/axion/lib/algebra/engine";
 import type { NotebookState } from "../app/axion/lib/notebook/types";
 import { __testing, type NotebookAction } from "../app/axion/lib/notebook/useNotebook";
-import type { EvaluationSuccess } from "../app/axion/lib/algebra/engine";
 
 const { notebookReducer } = __testing;
 
-let counter = 0;
-
-vi.mock("nanoid", () => ({
-  nanoid: () => `cell-${counter += 1}`,
-}));
-
-const baseEvaluation: EvaluationSuccess = {
+const successEvaluation: EvaluationSuccess = {
   ok: true,
   tokens: [],
   ast: {} as never,
@@ -19,15 +13,22 @@ const baseEvaluation: EvaluationSuccess = {
   solution: {
     type: "algebra" as never,
     descriptor: {} as never,
-    exact: "x",
-    approx: null,
+    exact: "2",
+    approx: "2",
+    approxValue: 2,
     steps: [],
-    plotConfig: null,
     followUps: [],
+    plotConfig: null,
   },
-  exact: "x",
-  approx: null,
-  approxValue: null,
+  exact: "2",
+  approx: "2",
+  approxValue: 2,
+};
+
+const errorEvaluation: EvaluationFailure = {
+  ok: false,
+  message: "Invalid",
+  position: 0,
 };
 
 function reduce(initial: NotebookState, actions: NotebookAction[]): NotebookState {
@@ -35,105 +36,88 @@ function reduce(initial: NotebookState, actions: NotebookAction[]): NotebookStat
 }
 
 describe("notebook reducer", () => {
-  beforeEach(() => {
-    counter = 0;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("appends success cells and keeps pinned cells at the top", () => {
+  it("creates cells in the requested order", () => {
     const state = reduce(
-      { cells: [] },
+      { cells: [], selectedId: null },
       [
-        { type: "appendSuccess", input: "1+1", evaluation: baseEvaluation },
-        { type: "appendSuccess", input: "2+2", evaluation: baseEvaluation },
-        { type: "togglePin", id: "cell-1" },
-        { type: "appendSuccess", input: "3+3", evaluation: baseEvaluation },
+        { type: "create", id: "cell-1", input: "", afterId: null, timestamp: 1 },
+        { type: "create", id: "cell-2", input: "", afterId: "cell-1", timestamp: 2 },
+        { type: "create", id: "cell-3", input: "", afterId: "cell-1", timestamp: 3 },
       ],
     );
 
-    expect(state.cells).toHaveLength(3);
-    expect(state.cells[0]?.id).toBe("cell-1");
-    expect(state.cells[1]?.input).toBe("3+3");
+    expect(state.cells.map((cell) => cell.id)).toEqual(["cell-1", "cell-3", "cell-2"]);
+    expect(state.selectedId).toBe("cell-3");
   });
 
-  it("reorders cells when dragging", () => {
+  it("stores evaluation results for a cell", () => {
     const state = reduce(
-      { cells: [] },
+      { cells: [], selectedId: null },
       [
-        { type: "appendSuccess", input: "a", evaluation: baseEvaluation },
-        { type: "appendSuccess", input: "b", evaluation: baseEvaluation },
-        { type: "reorder", sourceId: "cell-2", targetId: "cell-1" },
+        { type: "create", id: "cell-1", input: "1+1", afterId: null, timestamp: 1 },
+        { type: "setSuccess", id: "cell-1", evaluation: successEvaluation, timestamp: 2 },
       ],
     );
 
-    expect(state.cells[0]?.input).toBe("a");
-    expect(state.cells[1]?.input).toBe("b");
+    expect(state.cells[0]).toMatchObject({
+      id: "cell-1",
+      status: "success",
+      output: { type: "success", evaluation: successEvaluation },
+    });
   });
 
-  it("clears unpinned cells", () => {
-    const state = reduce(
-      { cells: [] },
+  it("resets output when input changes", () => {
+    const initial = reduce(
+      { cells: [], selectedId: null },
       [
-        { type: "appendSuccess", input: "a", evaluation: baseEvaluation },
-        { type: "appendSuccess", input: "b", evaluation: baseEvaluation },
-        { type: "togglePin", id: "cell-2" },
-        { type: "clearUnpinned" },
+        { type: "create", id: "cell-1", input: "1+1", afterId: null, timestamp: 1 },
+        { type: "setSuccess", id: "cell-1", evaluation: successEvaluation, timestamp: 2 },
       ],
     );
 
-    expect(state.cells).toHaveLength(1);
-    expect(state.cells[0]?.id).toBe("cell-2");
-  });
-
-  it("replaces the input of a cell and refreshes its timestamp", () => {
-    const nowSpy = vi.spyOn(Date, "now");
-    nowSpy.mockReturnValueOnce(1000);
-
-    const state = reduce(
-      { cells: [] },
-      [{ type: "appendSuccess", input: "original", evaluation: baseEvaluation }],
-    );
-
-    const target = state.cells[0];
-    expect(target).toBeDefined();
-
-    nowSpy.mockReturnValueOnce(2000);
-
-    const next = notebookReducer(state, {
-      type: "replaceInput",
-      id: target!.id,
-      input: "updated",
+    const next = notebookReducer(initial, {
+      type: "updateInput",
+      id: "cell-1",
+      input: "2+2",
+      timestamp: 3,
     });
 
     expect(next.cells[0]).toMatchObject({
       id: "cell-1",
-      input: "updated",
-      createdAt: 1000,
-      updatedAt: 2000,
+      input: "2+2",
+      status: "idle",
+      output: null,
     });
   });
 
-  it("only mutates the targeted cell when replacing input", () => {
+  it("captures errors for a cell", () => {
     const state = reduce(
-      { cells: [] },
+      { cells: [], selectedId: null },
       [
-        { type: "appendSuccess", input: "alpha", evaluation: baseEvaluation },
-        { type: "appendSuccess", input: "beta", evaluation: baseEvaluation },
+        { type: "create", id: "cell-1", input: "1/0", afterId: null, timestamp: 1 },
+        { type: "setError", id: "cell-1", error: errorEvaluation, timestamp: 2 },
       ],
     );
 
-    const [first, second] = state.cells;
-    const next = notebookReducer(state, {
-      type: "replaceInput",
-      id: "cell-2",
-      input: "gamma",
+    expect(state.cells[0]).toMatchObject({
+      id: "cell-1",
+      status: "error",
+      output: { type: "error", error: errorEvaluation },
     });
+  });
 
-    expect(next.cells[0]).not.toBe(first);
-    expect(next.cells[0]).toMatchObject({ id: "cell-2", input: "gamma" });
-    expect(next.cells[1]).toBe(second);
+  it("removes cells and selects the previous entry", () => {
+    const state = reduce(
+      { cells: [], selectedId: null },
+      [
+        { type: "create", id: "cell-1", input: "1", afterId: null, timestamp: 1 },
+        { type: "create", id: "cell-2", input: "2", afterId: "cell-1", timestamp: 2 },
+        { type: "create", id: "cell-3", input: "3", afterId: "cell-2", timestamp: 3 },
+        { type: "remove", id: "cell-3" },
+      ],
+    );
+
+    expect(state.cells.map((cell) => cell.id)).toEqual(["cell-1", "cell-2"]);
+    expect(state.selectedId).toBe("cell-2");
   });
 });

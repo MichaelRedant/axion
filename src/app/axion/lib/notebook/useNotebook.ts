@@ -2,44 +2,69 @@ import { useEffect, useMemo, useReducer } from "react";
 import { nanoid } from "nanoid";
 import type { EvaluationFailure, EvaluationSuccess } from "../algebra/engine";
 import { loadNotebookState, persistNotebookState } from "./storage";
-import type { NotebookActions, NotebookCell, NotebookState } from "./types";
+import type {
+  NotebookActions,
+  NotebookCell,
+  NotebookCellErrorOutput,
+  NotebookCellSuccessOutput,
+  NotebookState,
+} from "./types";
 
-interface AppendSuccessAction {
-  readonly type: "appendSuccess";
-  readonly input: string;
-  readonly evaluation: EvaluationSuccess;
-}
-
-interface AppendErrorAction {
-  readonly type: "appendError";
-  readonly input: string;
-  readonly error: EvaluationFailure;
-}
-
-interface TogglePinAction {
-  readonly type: "togglePin";
+interface CreateCellAction {
+  readonly type: "create";
   readonly id: string;
+  readonly afterId?: string | null;
+  readonly input: string;
+  readonly timestamp: number;
 }
 
-interface RemoveAction {
+interface UpdateInputAction {
+  readonly type: "updateInput";
+  readonly id: string;
+  readonly input: string;
+  readonly timestamp: number;
+}
+
+interface MarkEvaluatingAction {
+  readonly type: "markEvaluating";
+  readonly id: string;
+  readonly timestamp: number;
+}
+
+interface SetSuccessAction {
+  readonly type: "setSuccess";
+  readonly id: string;
+  readonly evaluation: EvaluationSuccess;
+  readonly timestamp: number;
+}
+
+interface SetErrorAction {
+  readonly type: "setError";
+  readonly id: string;
+  readonly error: EvaluationFailure;
+  readonly timestamp: number;
+}
+
+interface ClearOutputAction {
+  readonly type: "clearOutput";
+  readonly id: string;
+  readonly timestamp: number;
+}
+
+interface RemoveCellAction {
   readonly type: "remove";
   readonly id: string;
 }
 
+interface SelectCellAction {
+  readonly type: "select";
+  readonly id: string | null;
+}
+
 interface ReorderAction {
   readonly type: "reorder";
-  readonly sourceId: string;
-  readonly targetId: string;
-}
-
-interface ReplaceInputAction {
-  readonly type: "replaceInput";
   readonly id: string;
-  readonly input: string;
-}
-
-interface ClearUnpinnedAction {
-  readonly type: "clearUnpinned";
+  readonly targetOrder: number;
 }
 
 interface HydrateAction {
@@ -48,47 +73,58 @@ interface HydrateAction {
 }
 
 export type NotebookAction =
-  | AppendSuccessAction
-  | AppendErrorAction
-  | TogglePinAction
-  | RemoveAction
+  | CreateCellAction
+  | UpdateInputAction
+  | MarkEvaluatingAction
+  | SetSuccessAction
+  | SetErrorAction
+  | ClearOutputAction
+  | RemoveCellAction
+  | SelectCellAction
   | ReorderAction
-  | ReplaceInputAction
-  | ClearUnpinnedAction
   | HydrateAction;
 
 function notebookReducer(state: NotebookState, action: NotebookAction): NotebookState {
   switch (action.type) {
     case "hydrate":
-      return action.payload;
-    case "appendSuccess":
-      return appendCell(state, action.input, "success", action.evaluation);
-    case "appendError":
-      return appendCell(state, action.input, "error", action.error);
-    case "togglePin":
-      return {
-        cells: state.cells.map((cell) =>
-          cell.id === action.id
-            ? { ...cell, pinned: !cell.pinned, updatedAt: Date.now() }
-            : cell,
-        ),
-      };
+      return normalizeState(action.payload);
+    case "create":
+      return createCell(state, action);
+    case "updateInput":
+      return updateCellInput(state, action);
+    case "markEvaluating":
+      return updateCell(state, action.id, (cell) => ({
+        ...cell,
+        status: "running",
+        updatedAt: action.timestamp,
+      }));
+    case "setSuccess":
+      return updateCell(state, action.id, (cell) => ({
+        ...cell,
+        status: "success",
+        updatedAt: action.timestamp,
+        output: { type: "success", evaluation: action.evaluation } satisfies NotebookCellSuccessOutput,
+      }));
+    case "setError":
+      return updateCell(state, action.id, (cell) => ({
+        ...cell,
+        status: "error",
+        updatedAt: action.timestamp,
+        output: { type: "error", error: action.error } satisfies NotebookCellErrorOutput,
+      }));
+    case "clearOutput":
+      return updateCell(state, action.id, (cell) => ({
+        ...cell,
+        status: "idle",
+        updatedAt: action.timestamp,
+        output: null,
+      }));
     case "remove":
-      return {
-        cells: state.cells.filter((cell) => cell.id !== action.id),
-      };
+      return removeCell(state, action.id);
+    case "select":
+      return { ...state, selectedId: action.id } satisfies NotebookState;
     case "reorder":
-      return reorderCells(state, action.sourceId, action.targetId);
-    case "replaceInput":
-      return {
-        cells: state.cells.map((cell) =>
-          cell.id === action.id ? { ...cell, input: action.input, updatedAt: Date.now() } : cell,
-        ),
-      };
-    case "clearUnpinned":
-      return {
-        cells: state.cells.filter((cell) => cell.pinned),
-      };
+      return reorderCells(state, action.id, action.targetOrder);
     default:
       return state;
   }
@@ -96,62 +132,106 @@ function notebookReducer(state: NotebookState, action: NotebookAction): Notebook
 
 export const __testing = { notebookReducer } as const;
 
-function appendCell(
-  state: NotebookState,
-  input: string,
-  type: "success" | "error",
-  payload: EvaluationSuccess | EvaluationFailure,
-): NotebookState {
-  const now = Date.now();
-
-  const cell: NotebookCell = {
-    id: nanoid(),
-    input,
-    createdAt: now,
-    updatedAt: now,
-    status: type,
-    pinned: false,
-    payload:
-      type === "success"
-        ? { type, evaluation: payload as EvaluationSuccess }
-        : { type, error: payload as EvaluationFailure },
-  };
-
-  const pinned = state.cells.filter((item) => item.pinned);
-  const rest = state.cells.filter((item) => !item.pinned);
-
-  return {
-    cells: [...pinned, cell, ...rest],
-  };
+function normalizeState(state: NotebookState): NotebookState {
+  const sorted = [...state.cells].sort((a, b) => a.order - b.order);
+  const normalized = sorted.map((cell, index) => ({ ...cell, order: index }));
+  const selected = state.selectedId ?? normalized[0]?.id ?? null;
+  return { cells: normalized, selectedId: selected } satisfies NotebookState;
 }
 
-function reorderCells(state: NotebookState, sourceId: string, targetId: string): NotebookState {
-  if (sourceId === targetId) {
-    return state;
-  }
+function createCell(state: NotebookState, action: CreateCellAction): NotebookState {
+  const cells = [...state.cells];
+  const insertIndex = action.afterId
+    ? Math.max(
+        0,
+        cells.findIndex((cell) => cell.id === action.afterId) + 1,
+      )
+    : cells.length;
 
-  const indexMap = new Map(state.cells.map((cell, index) => [cell.id, index] as const));
-  const sourceIndex = indexMap.get(sourceId);
-  const targetIndex = indexMap.get(targetId);
+  const nextCell: NotebookCell = {
+    id: action.id,
+    input: action.input,
+    createdAt: action.timestamp,
+    updatedAt: action.timestamp,
+    status: "idle",
+    order: insertIndex,
+    output: null,
+  } satisfies NotebookCell;
 
-  if (sourceIndex === undefined || targetIndex === undefined) {
-    return state;
-  }
+  cells.splice(insertIndex, 0, nextCell);
 
-  const next = [...state.cells];
-  const [moved] = next.splice(sourceIndex, 1);
-  next.splice(targetIndex, 0, moved);
-  const updatedAt = Date.now();
+  const reordered = cells.map((cell, index) => ({ ...cell, order: index }));
 
   return {
-    cells: next.map((cell) =>
-      cell.id === moved.id ? { ...cell, updatedAt } : cell,
-    ),
-  };
+    cells: reordered,
+    selectedId: nextCell.id,
+  } satisfies NotebookState;
+}
+
+function updateCellInput(state: NotebookState, action: UpdateInputAction): NotebookState {
+  const next = updateCell(state, action.id, (cell) => ({
+    ...cell,
+    input: action.input,
+    updatedAt: action.timestamp,
+    status: "idle",
+    output: null,
+  }));
+  return next;
+}
+
+function updateCell(
+  state: NotebookState,
+  id: string,
+  updater: (cell: NotebookCell) => NotebookCell,
+): NotebookState {
+  const index = state.cells.findIndex((cell) => cell.id === id);
+  if (index === -1) {
+    return state;
+  }
+
+  const cells = [...state.cells];
+  cells[index] = updater(cells[index]!);
+
+  return {
+    ...state,
+    cells,
+  } satisfies NotebookState;
+}
+
+function removeCell(state: NotebookState, id: string): NotebookState {
+  const index = state.cells.findIndex((cell) => cell.id === id);
+  if (index === -1) {
+    return state;
+  }
+
+  const cells = state.cells.filter((cell) => cell.id !== id).map((cell, order) => ({ ...cell, order }));
+  const selected =
+    state.selectedId === id
+      ? cells[Math.max(0, index - 1)]?.id ?? cells[0]?.id ?? null
+      : state.selectedId;
+
+  return { cells, selectedId: selected } satisfies NotebookState;
+}
+
+function reorderCells(state: NotebookState, id: string, targetOrder: number): NotebookState {
+  const index = state.cells.findIndex((cell) => cell.id === id);
+  if (index === -1) {
+    return state;
+  }
+
+  const normalizedTarget = Math.max(0, Math.min(targetOrder, state.cells.length - 1));
+  const cells = [...state.cells];
+  const [moved] = cells.splice(index, 1);
+  cells.splice(normalizedTarget, 0, moved);
+
+  return {
+    ...state,
+    cells: cells.map((cell, order) => ({ ...cell, order })),
+  } satisfies NotebookState;
 }
 
 export function useNotebook(): [NotebookState, NotebookActions] {
-  const [state, dispatch] = useReducer(notebookReducer, { cells: [] });
+  const [state, dispatch] = useReducer(notebookReducer, { cells: [], selectedId: null });
 
   useEffect(() => {
     const loaded = loadNotebookState();
@@ -159,23 +239,34 @@ export function useNotebook(): [NotebookState, NotebookActions] {
   }, []);
 
   useEffect(() => {
-    if (!state.cells.length) {
-      persistNotebookState(state);
-      return;
-    }
-
     persistNotebookState(state);
   }, [state]);
 
   const actions = useMemo<NotebookActions>(() => {
     return {
-      appendSuccess: (input, evaluation) => dispatch({ type: "appendSuccess", input, evaluation }),
-      appendError: (input, error) => dispatch({ type: "appendError", input, error }),
-      togglePin: (id) => dispatch({ type: "togglePin", id }),
+      createCell: (options) => {
+        const id = nanoid();
+        const timestamp = Date.now();
+        dispatch({
+          type: "create",
+          id,
+          afterId: options?.afterId ?? null,
+          input: options?.input ?? "",
+          timestamp,
+        });
+        return id;
+      },
+      updateInput: (id, nextInput) =>
+        dispatch({ type: "updateInput", id, input: nextInput, timestamp: Date.now() }),
+      markEvaluating: (id) => dispatch({ type: "markEvaluating", id, timestamp: Date.now() }),
+      setSuccess: (id, evaluation) =>
+        dispatch({ type: "setSuccess", id, evaluation, timestamp: Date.now() }),
+      setError: (id, error) => dispatch({ type: "setError", id, error, timestamp: Date.now() }),
+      clearOutput: (id) => dispatch({ type: "clearOutput", id, timestamp: Date.now() }),
       remove: (id) => dispatch({ type: "remove", id }),
-      reorder: (sourceId, targetId) => dispatch({ type: "reorder", sourceId, targetId }),
-      replaceInput: (id, nextInput) => dispatch({ type: "replaceInput", id, input: nextInput }),
-      clearUnpinned: () => dispatch({ type: "clearUnpinned" }),
+      select: (id) => dispatch({ type: "select", id }),
+      reorder: (id, targetOrder) => dispatch({ type: "reorder", id, targetOrder }),
+      hydrate: (payload) => dispatch({ type: "hydrate", payload }),
     } satisfies NotebookActions;
   }, []);
 
