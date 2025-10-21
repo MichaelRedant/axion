@@ -285,42 +285,22 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
                   </span>
                 ) : null}
                 {exactDecimal ? (
-                  <div
-                    role="group"
-                    aria-label={t("common.exactValueFormat", "Exact value format")}
-                    className="axion-segmented-control"
+                  <button
+                    type="button"
+                    className="axion-button axion-button--ghost text-[10px]"
+                    onClick={() => setShowExactAsDecimal((current) => !current)}
+                    aria-pressed={showExactAsDecimal}
                   >
-                    <button
-                      type="button"
-                      className={clsx(
-                        "axion-segmented-control__button",
-                        !showExactAsDecimal && "axion-segmented-control__button--active",
-                      )}
-                      onClick={() => setShowExactAsDecimal(false)}
-                      aria-pressed={!showExactAsDecimal}
-                      title={t("common.showFraction", "Show fraction")}
-                    >
-                      {t("common.fraction", "Fraction")}
-                    </button>
-                    <button
-                      type="button"
-                      className={clsx(
-                        "axion-segmented-control__button",
-                        showExactAsDecimal && "axion-segmented-control__button--active",
-                      )}
-                      onClick={() => setShowExactAsDecimal(true)}
-                      aria-pressed={showExactAsDecimal}
-                      title={t("common.showDecimal", "Show decimal")}
-                    >
-                      {t("common.decimal", "Decimal")}
-                    </button>
-                  </div>
+                    {showExactAsDecimal
+                      ? t("common.showFraction", "Show fraction")
+                      : t("common.showDecimal", "Show decimal")}
+                  </button>
                 ) : null}
               </div>
               {cell.output?.type === "success" ? (
                 <div className="space-y-4" data-testid={`notebook-output-${cell.id}`}>
                   <div className="space-y-2 text-base">
-                    <div className="flex flex-wrap items-start gap-3">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-h-[32px] flex-1">
                         {showExactAsDecimal && exactDecimal ? (
                           <code
@@ -337,10 +317,22 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
                           </code>
                         )}
                       </div>
+                      {exactDecimal ? (
+                        <button
+                          type="button"
+                          className="axion-button axion-button--ghost text-[11px]"
+                          onClick={() => setShowExactAsDecimal((current) => !current)}
+                          aria-pressed={showExactAsDecimal}
+                        >
+                          {showExactAsDecimal
+                            ? t("common.showFraction", "Show fraction")
+                            : t("common.showDecimal", "Show decimal")}
+                        </button>
+                      ) : null}
                     </div>
                     {cell.output.evaluation.approx ? (
                       <p className="font-mono text-xs text-amber-200">
-                        ≈ {cell.output.evaluation.approx}
+                        ~= {cell.output.evaluation.approx}
                       </p>
                     ) : null}
                   </div>
