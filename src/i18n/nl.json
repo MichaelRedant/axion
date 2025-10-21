@@ -3,6 +3,9 @@
     "yes": "Ja",
     "no": "Nee",
     "notAvailable": "Niet beschikbaar",
+    "fraction": "Breuk",
+    "decimal": "Decimaal",
+    "exactValueFormat": "Weergave exacte waarde",
     "showDecimal": "Toon als getal",
     "showFraction": "Toon als breuk"
   },

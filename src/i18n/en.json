@@ -3,6 +3,9 @@
     "yes": "Yes",
     "no": "No",
     "notAvailable": "Not available",
+    "fraction": "Fraction",
+    "decimal": "Decimal",
+    "exactValueFormat": "Exact value format",
     "showDecimal": "Show decimal",
     "showFraction": "Show fraction"
   },

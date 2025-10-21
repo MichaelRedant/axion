@@ -223,21 +223,41 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                 )}
               >
                 <div className="axion-metric-card">
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
                       {t("result.exact")}
                     </p>
                     {exactDecimal ? (
-                      <button
-                        type="button"
-                        className="axion-button axion-button--ghost text-[0.6rem]"
-                        onClick={() => setShowExactAsDecimal((current) => !current)}
-                        aria-pressed={showExactAsDecimal}
+                      <div
+                        role="group"
+                        aria-label={t("common.exactValueFormat", "Exact value format")}
+                        className="axion-segmented-control"
                       >
-                        {showExactAsDecimal
-                          ? t("common.showFraction", "Show fraction")
-                          : t("common.showDecimal", "Show decimal")}
-                      </button>
+                        <button
+                          type="button"
+                          className={clsx(
+                            "axion-segmented-control__button",
+                            !showExactAsDecimal && "axion-segmented-control__button--active",
+                          )}
+                          onClick={() => setShowExactAsDecimal(false)}
+                          aria-pressed={!showExactAsDecimal}
+                          title={t("common.showFraction", "Show fraction")}
+                        >
+                          {t("common.fraction", "Fraction")}
+                        </button>
+                        <button
+                          type="button"
+                          className={clsx(
+                            "axion-segmented-control__button",
+                            showExactAsDecimal && "axion-segmented-control__button--active",
+                          )}
+                          onClick={() => setShowExactAsDecimal(true)}
+                          aria-pressed={showExactAsDecimal}
+                          title={t("common.showDecimal", "Show decimal")}
+                        >
+                          {t("common.decimal", "Decimal")}
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                   <div className="mt-2 min-h-[48px] text-lg" data-testid="result-exact">
@@ -259,7 +279,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                   <div className="axion-metric-card border-[rgba(123,44,191,0.35)]">
                     <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.approx")}</p>
                     <p className="mt-2 font-mono text-base text-amber-200" data-testid="result-approx">
-                      ~ {result.solution.approx}
+                      ≈ {result.solution.approx}
                     </p>
                   </div>
                 ) : null}
