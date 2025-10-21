@@ -147,22 +147,6 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       setShowExactAsDecimal(false);
     }, [exactLatex]);
 
-    const solution = cell.type === "math" && cell.output?.type === "success" ? cell.output.evaluation.solution : null;
-
-    const followUps = solution?.followUps ?? [];
-    const steps = solution?.steps ?? [];
-    const problemType = solution?.type;
-
-    const handleFollowUpNavigate = useCallback(
-      (reference: ExplainReference) => {
-        if (!reference.targetStepId) {
-          return;
-        }
-        stepsRef.current?.focusStep(reference.targetStepId);
-      },
-      [],
-    );
-
     const solution =
       cell.type === "math" && cell.output?.type === "success"
         ? cell.output.evaluation.solution
@@ -171,25 +155,6 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
     const followUps = solution?.followUps ?? [];
     const steps = solution?.steps ?? [];
     const problemType = solution?.type;
-
-    const handleFollowUpNavigate = useCallback(
-      (reference: ExplainReference) => {
-        if (!reference.targetStepId) {
-          return;
-        }
-        stepsRef.current?.focusStep(reference.targetStepId);
-      },
-      [],
-    );
-
-    const evaluationSolution =
-      cell.type === "math" && cell.output?.type === "success"
-        ? cell.output.evaluation.solution
-        : null;
-
-    const followUps = evaluationSolution?.followUps ?? [];
-    const steps = evaluationSolution?.steps ?? [];
-    const problemType = evaluationSolution?.type;
 
     const handleFollowUpNavigate = useCallback(
       (reference: ExplainReference) => {

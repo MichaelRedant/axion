@@ -196,7 +196,8 @@ function buildSolvePlotConfig(
   if (variables.length === 1) {
     const variable = variables[0] ?? primaryVariable;
     const roots = extractNumericRoots(solution.roots);
-    const domain = roots.length ? expandDomainFromRoots(roots) : [-6, 6];
+    const fallbackDomain: [number, number] = [-6, 6];
+    const domain = roots.length ? expandDomainFromRoots(roots) : fallbackDomain;
     const annotations = createRootAnnotations(roots);
     const label = `f(${variable}) = 0`;
 

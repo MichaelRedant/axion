@@ -11,11 +11,11 @@ interface NotebookPaneProps {
   readonly cells: NotebookCell[];
   readonly katex: KatexHandle | null;
   readonly statusMessage?: string | null;
-  readonly onClearUnpinned: () => void;
+  readonly onClearUnpinned?: () => void;
   readonly onRestore: (id: string) => void;
   readonly onDuplicateAndEdit: (id: string) => void;
   readonly onCopy: (id: string) => void;
-  readonly onTogglePin: (id: string) => void;
+  readonly onTogglePin?: (id: string) => void;
   readonly onRemove: (id: string) => void;
   readonly onReorder: (sourceId: string, targetId: string) => void;
   readonly onExportMarkdown: () => Promise<void> | void;
@@ -73,13 +73,15 @@ export function NotebookPane({
       <header className="flex flex-wrap items-center justify-between gap-3 text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
         <span>{t("notebook.title", "Notebook")}</span>
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="axion-button axion-button--ghost text-[11px]"
-            onClick={() => onClearUnpinned()}
-          >
-            {t("notebook.clearUnpinned", "Wis niet-vastgezette")}
-          </button>
+          {onClearUnpinned ? (
+            <button
+              type="button"
+              className="axion-button axion-button--ghost text-[11px]"
+              onClick={() => onClearUnpinned()}
+            >
+              {t("notebook.clearUnpinned", "Wis niet-vastgezette")}
+            </button>
+          ) : null}
           <button
             type="button"
             className="axion-button axion-button--ghost text-[11px]"
@@ -102,12 +104,13 @@ export function NotebookPane({
           {cells.map((cell) => {
             const formattedTime = formatter.format(new Date(cell.createdAt));
             const isDragged = draggedId === cell.id;
-            const payload = cell.payload;
+            const output = cell.output;
+            const pinned = ((cell as { pinned?: boolean }).pinned ?? false) === true;
 
             let exactHtml: string | null = null;
-            if (payload.type === "success" && katex) {
+            if (output?.type === "success" && katex) {
               try {
-                exactHtml = katex.renderToString(payload.evaluation.exact);
+                exactHtml = katex.renderToString(output.evaluation.exact);
               } catch {
                 exactHtml = null;
               }
@@ -129,7 +132,7 @@ export function NotebookPane({
                     <span className="cursor-grab text-[10px] uppercase tracking-[0.2em] text-[var(--ax-muted)]">
                       {t("notebook.drag", "slepen")}
                     </span>
-                    {cell.pinned ? (
+                    {pinned ? (
                       <span className="inline-flex items-center gap-1 rounded-full border border-[rgba(255,184,0,0.4)] px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] text-[#ffb347]">
                         {t("history.pinnedLabel")}
                       </span>
@@ -139,25 +142,29 @@ export function NotebookPane({
                 <div className="mt-2 text-sm">
                   <div className="font-mono text-[rgba(255,255,255,0.75)]">{cell.input}</div>
                   <div className="mt-2 text-base" data-testid={`notebook-${cell.id}`}>
-                    {payload.type === "success" ? (
+                    {output?.type === "success" ? (
                       exactHtml ? (
                         <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
                       ) : (
                         <code className="font-mono text-sm text-[var(--ax-muted)]">
-                          {payload.evaluation.exact}
+                          {output.evaluation.exact}
                         </code>
                       )
+                    ) : output?.type === "error" ? (
+                      <p className="font-mono text-sm text-rose-200">{output.error.message}</p>
                     ) : (
-                      <p className="font-mono text-sm text-rose-200">{payload.error.message}</p>
+                      <p className="text-sm text-[rgba(255,255,255,0.45)]">
+                        {t("notebook.pending", "Nog geen evaluatie")}
+                      </p>
                     )}
                   </div>
-                  {payload.type === "success" && payload.evaluation.approx ? (
-                    <p className="mt-2 font-mono text-xs text-amber-200">~= {payload.evaluation.approx}</p>
+                  {output?.type === "success" && output.evaluation.approx ? (
+                    <p className="mt-2 font-mono text-xs text-amber-200">~= {output.evaluation.approx}</p>
                   ) : null}
-                  {payload.type === "success" ? (
+                  {output?.type === "success" ? (
                     <ExplainAccordion
                       className="mt-3"
-                      followUps={payload.evaluation.solution.followUps ?? []}
+                      followUps={output.evaluation.solution.followUps ?? []}
                     />
                   ) : null}
                 </div>
@@ -183,13 +190,15 @@ export function NotebookPane({
                   >
                     {t("history.copy")}
                   </button>
-                  <button
-                    type="button"
-                    className="axion-button axion-button--ghost text-xs"
-                    onClick={() => onTogglePin(cell.id)}
-                  >
-                    {cell.pinned ? t("history.unpin") : t("history.pin")}
-                  </button>
+                  {onTogglePin ? (
+                    <button
+                      type="button"
+                      className="axion-button axion-button--ghost text-xs"
+                      onClick={() => onTogglePin(cell.id)}
+                    >
+                      {pinned ? t("history.unpin") : t("history.pin")}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="axion-button axion-button--ghost text-xs"

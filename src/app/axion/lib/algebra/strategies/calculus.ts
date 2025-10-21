@@ -200,12 +200,16 @@ export class CalculusStrategy implements ProblemStrategy {
 
     const target = targetNode ?? cloneNode(variableNode ?? expression);
     const direction = parseDirection(directionNode);
+    const approachingValue = resolveApproachingValue(target);
 
-    const limitValue = computeLimit(expression, {
-      variable,
-      approaching: target,
-      direction,
-    });
+    const limitValue =
+      approachingValue !== null
+        ? computeLimit(expression, {
+            variable,
+            approaching: approachingValue,
+            direction,
+          })
+        : null;
 
     const latexLimit = limitValue !== null ? formatNumber(limitValue) : "Niet gedefinieerd";
 
@@ -363,6 +367,24 @@ function parseDirection(node: Node | undefined): "left" | "right" | "both" {
     if (node.name === "right") return "right";
   }
   return "both";
+}
+
+function resolveApproachingValue(target: Node): number | null {
+  if (target.type === "Number") {
+    const value = Number(target.value);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  if (target.type === "Symbol") {
+    if (target.name === "pi") {
+      return Math.PI;
+    }
+    if (target.name === "e") {
+      return Math.E;
+    }
+  }
+
+  return null;
 }
 
 function formatNumber(value: number): string {

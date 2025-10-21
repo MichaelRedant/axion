@@ -194,21 +194,13 @@ function normalizeMaximaStep(entry: unknown, index: number): SolutionStep | null
     return null;
   }
 
-  const step: SolutionStep = {
+  return {
     id,
     title,
     description: description ?? "",
+    ...(latex ? { latex } : {}),
+    ...(expression ? { expression } : {}),
   };
-
-  if (latex) {
-    step.latex = latex;
-  }
-
-  if (expression) {
-    step.expression = expression;
-  }
-
-  return step;
 }
 
 function readStepField(record: Record<string, unknown>, keys: string[]): string | null {

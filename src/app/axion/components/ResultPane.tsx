@@ -32,6 +32,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
   );
   const [hasUnreadFollowUps, setHasUnreadFollowUps] = useState(false);
   const [showExactAsDecimal, setShowExactAsDecimal] = useState(false);
+  const stepsRef = useRef<SolutionStepsHandle | null>(null);
   const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
 
   const exactLatex = result?.solution.exact ?? null;
@@ -597,7 +598,7 @@ function buildCaretLine(expression: string, position: number): string {
 type Translate = (
   key: string,
   fallback?: string,
-  params?: Record<string, unknown>,
+  params?: Record<string, string | number | boolean>,
 ) => string;
 
 type DescriptorFieldId =
@@ -927,18 +928,12 @@ function normalizeDetailValue(
     );
 
     const normalized: NormalizedRationaleDetail[] = [];
-    const base: NormalizedRationaleDetail = {};
-    if (title) {
-      base.title = title;
-    }
-    if (description) {
-      base.description = description;
-    }
-    if (bullets.length) {
-      base.bullets = bullets;
-    }
-    if (Object.keys(base).length > 0) {
-      normalized.push(base);
+    if (title || description || bullets.length) {
+      normalized.push({
+        ...(title ? { title } : {}),
+        ...(description ? { description } : {}),
+        ...(bullets.length ? { bullets } : {}),
+      });
     }
 
     if (detail.details) {

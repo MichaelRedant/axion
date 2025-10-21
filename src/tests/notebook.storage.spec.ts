@@ -31,9 +31,9 @@ describe("notebook storage", () => {
   let localStorageMock: LocalStorageMock;
 
   const sampleNode = { type: "NumberLiteral" } as unknown as Node;
-  const sampleDescriptor = { type: "algebra" } as unknown as ProblemDescriptor;
+  const sampleDescriptor = { type: "limit" } as unknown as ProblemDescriptor;
   const sampleSolution: SolutionBundle = {
-    type: "algebra",
+    type: "limit",
     descriptor: sampleDescriptor,
     exact: "1",
     approx: "1",

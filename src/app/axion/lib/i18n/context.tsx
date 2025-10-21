@@ -16,10 +16,12 @@ type Dictionary = typeof nl;
 
 type TranslationKey = string;
 
+type TranslationValues = Record<string, string | number | boolean>;
+
 type LanguageContextValue = {
   locale: Locale;
   setLocale: (locale: Locale) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, fallback?: string, values?: TranslationValues) => string;
   dictionary: Dictionary;
 };
 
@@ -43,9 +45,24 @@ function getValue(path: string, dictionary: Dictionary): string | undefined {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocale] = useState<Locale>("nl");
 
+  const formatTemplate = useMemo(
+    () => (template: string, values?: TranslationValues) => {
+      if (!values) {
+        return template;
+      }
+      return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, token) =>
+        token in values ? String(values[token]) : match,
+      );
+    },
+    [],
+  );
+
   const value = useMemo<LanguageContextValue>(() => {
     const dictionary = dictionaries[locale];
-    const translate = (key: TranslationKey) => getValue(key, dictionary) ?? key;
+    const translate = (key: TranslationKey, fallback?: string, values?: TranslationValues) => {
+      const template = getValue(key, dictionary) ?? fallback ?? key;
+      return formatTemplate(template, values);
+    };
 
     return {
       locale,
@@ -53,7 +70,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       t: translate,
       dictionary,
     };
-  }, [locale]);
+  }, [formatTemplate, locale]);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }

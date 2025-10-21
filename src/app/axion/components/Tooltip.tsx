@@ -4,9 +4,19 @@ import { cloneElement, useId, useState } from "react";
 import type { FocusEvent, MouseEvent, ReactElement, TouchEvent } from "react";
 import clsx from "clsx";
 
+type TooltipTargetProps = {
+  readonly "aria-describedby"?: string;
+  readonly onFocus?: (event: FocusEvent<HTMLElement>) => void;
+  readonly onBlur?: (event: FocusEvent<HTMLElement>) => void;
+  readonly onMouseEnter?: (event: MouseEvent<HTMLElement>) => void;
+  readonly onMouseLeave?: (event: MouseEvent<HTMLElement>) => void;
+  readonly onTouchStart?: (event: TouchEvent<HTMLElement>) => void;
+  readonly onTouchEnd?: (event: TouchEvent<HTMLElement>) => void;
+};
+
 interface TooltipProps {
   readonly content: string;
-  readonly children: ReactElement;
+  readonly children: ReactElement<TooltipTargetProps>;
   readonly placement?: "top" | "bottom";
 }
 

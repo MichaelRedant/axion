@@ -2,10 +2,13 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 let Notebook: typeof import("@/app/axion/components/notebook/Notebook")["Notebook"];
-import type { NotebookCell } from "@/app/axion/lib/notebook/types";
+import type { NotebookCell, NotebookCellType } from "@/app/axion/lib/notebook/types";
 
 vi.mock("@/app/axion/lib/i18n/context", () => {
-  const translate = (fallback?: string, params?: Record<string, unknown>) => {
+  const translate = (
+    fallback?: string,
+    params?: Record<string, string | number | boolean>,
+  ) => {
     if (!fallback) {
       return "";
     }
@@ -16,7 +19,11 @@ vi.mock("@/app/axion/lib/i18n/context", () => {
   };
   return {
     useI18n: () => ({
-      t: (_key: string, fallback?: string, params?: Record<string, unknown>) => translate(fallback, params),
+      t: (
+        _key: string,
+        fallback?: string,
+        params?: Record<string, string | number | boolean>,
+      ) => translate(fallback, params),
       locale: "en",
       setLocale: () => {},
       dictionary: {},
@@ -100,10 +107,12 @@ describe("notebook rendering", () => {
   });
 });
 
+type CreateCellOptions = { afterId?: string | null; type?: NotebookCellType };
+
 function renderNotebook(cells: NotebookCell[], selectedId: string) {
   const noop = () => {};
-  const createCell = vi.fn(() => "new-cell");
-  const reorder = vi.fn();
+  const createCell = vi.fn<[CreateCellOptions?], string>(() => "new-cell");
+  const reorder = vi.fn<[string, number], void>();
 
   render(
     <Notebook
