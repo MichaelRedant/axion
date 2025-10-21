@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import React, {
   forwardRef,
+  useCallback,
   useImperativeHandle,
   useMemo,
   useRef,
@@ -16,6 +17,8 @@ import type {
 import { MainInput, type MainInputHandle } from "./MainInput";
 import { TextCellEditor, type TextCellEditorHandle } from "./TextCellEditor";
 import { ExplainAccordion } from "../ExplainAccordion";
+import type { ExplainReference } from "../../lib/algebra/solution";
+import { SolutionSteps, type SolutionStepsHandle } from "./SolutionSteps";
 
 export interface NotebookCellHandle {
   insert: (text: string, cursorOffset?: number) => void;
@@ -81,6 +84,7 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
     const { t, locale } = useI18n();
     const mathInputRef = useRef<MainInputHandle | null>(null);
     const textInputRef = useRef<TextCellEditorHandle | null>(null);
+    const stepsRef = useRef<SolutionStepsHandle | null>(null);
 
     useImperativeHandle(ref, () => ({
       insert: (text: string, offset?: number) => {
@@ -122,6 +126,25 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
         return null;
       }
     }, [cell.output, cell.type, katex]);
+
+    const evaluationSolution =
+      cell.type === "math" && cell.output?.type === "success"
+        ? cell.output.evaluation.solution
+        : null;
+
+    const followUps = evaluationSolution?.followUps ?? [];
+    const steps = evaluationSolution?.steps ?? [];
+    const problemType = evaluationSolution?.type;
+
+    const handleFollowUpNavigate = useCallback(
+      (reference: ExplainReference) => {
+        if (!reference.targetStepId) {
+          return;
+        }
+        stepsRef.current?.focusStep(reference.targetStepId);
+      },
+      [],
+    );
 
     const statusLabel = useMemo(() => {
       if (cell.type !== "math") {
@@ -246,20 +269,31 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
                 ) : null}
               </div>
               {cell.output?.type === "success" ? (
-                <div className="space-y-2 text-base" data-testid={`notebook-output-${cell.id}`}>
-                  {exactHtml ? (
-                    <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
-                  ) : (
-                    <code className="font-mono text-sm text-[var(--ax-muted)]">
-                      {cell.output.evaluation.exact}
-                    </code>
-                  )}
-                  {cell.output.evaluation.approx ? (
-                    <p className="font-mono text-xs text-amber-200">
-                      ~= {cell.output.evaluation.approx}
-                    </p>
-                  ) : null}
-                  <ExplainAccordion followUps={cell.output.evaluation.solution.followUps ?? []} />
+                <div className="space-y-4" data-testid={`notebook-output-${cell.id}`}>
+                  <div className="space-y-2 text-base">
+                    {exactHtml ? (
+                      <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
+                    ) : (
+                      <code className="font-mono text-sm text-[var(--ax-muted)]">
+                        {cell.output.evaluation.exact}
+                      </code>
+                    )}
+                    {cell.output.evaluation.approx ? (
+                      <p className="font-mono text-xs text-amber-200">
+                        ~= {cell.output.evaluation.approx}
+                      </p>
+                    ) : null}
+                  </div>
+                  <SolutionSteps
+                    ref={stepsRef}
+                    steps={steps}
+                    katex={katex}
+                    problemType={problemType}
+                  />
+                  <ExplainAccordion
+                    followUps={followUps}
+                    onReferenceClick={handleFollowUpNavigate}
+                  />
                 </div>
               ) : cell.output?.type === "error" ? (
                 <p className="font-mono text-sm text-rose-200" data-testid={`notebook-output-${cell.id}`}>
