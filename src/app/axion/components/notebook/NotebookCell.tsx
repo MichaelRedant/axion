@@ -300,21 +300,35 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
               {cell.output?.type === "success" ? (
                 <div className="space-y-4" data-testid={`notebook-output-${cell.id}`}>
                   <div className="space-y-2 text-base">
-                    <div className="min-h-[32px]">
-                      {showExactAsDecimal && exactDecimal ? (
-                        <code
-                          className="font-mono text-base text-[var(--ax-text)]"
-                          data-testid={`notebook-exact-decimal-${cell.id}`}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-h-[32px] flex-1">
+                        {showExactAsDecimal && exactDecimal ? (
+                          <code
+                            className="font-mono text-base text-[var(--ax-text)]"
+                            data-testid={`notebook-exact-decimal-${cell.id}`}
+                          >
+                            {exactDecimal}
+                          </code>
+                        ) : exactHtml ? (
+                          <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
+                        ) : (
+                          <code className="font-mono text-sm text-[var(--ax-muted)]">
+                            {cell.output.evaluation.exact}
+                          </code>
+                        )}
+                      </div>
+                      {exactDecimal ? (
+                        <button
+                          type="button"
+                          className="axion-button axion-button--ghost text-[11px]"
+                          onClick={() => setShowExactAsDecimal((current) => !current)}
+                          aria-pressed={showExactAsDecimal}
                         >
-                          {exactDecimal}
-                        </code>
-                      ) : exactHtml ? (
-                        <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
-                      ) : (
-                        <code className="font-mono text-sm text-[var(--ax-muted)]">
-                          {cell.output.evaluation.exact}
-                        </code>
-                      )}
+                          {showExactAsDecimal
+                            ? t("common.showFraction", "Show fraction")
+                            : t("common.showDecimal", "Show decimal")}
+                        </button>
+                      ) : null}
                     </div>
                     {cell.output.evaluation.approx ? (
                       <p className="font-mono text-xs text-amber-200">
