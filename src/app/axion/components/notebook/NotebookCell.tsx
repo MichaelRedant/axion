@@ -163,6 +163,25 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       [],
     );
 
+    const solution =
+      cell.type === "math" && cell.output?.type === "success"
+        ? cell.output.evaluation.solution
+        : null;
+
+    const followUps = solution?.followUps ?? [];
+    const steps = solution?.steps ?? [];
+    const problemType = solution?.type;
+
+    const handleFollowUpNavigate = useCallback(
+      (reference: ExplainReference) => {
+        if (!reference.targetStepId) {
+          return;
+        }
+        stepsRef.current?.focusStep(reference.targetStepId);
+      },
+      [],
+    );
+
     const statusLabel = useMemo(() => {
       if (cell.type !== "math") {
         return null;
