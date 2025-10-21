@@ -132,6 +132,7 @@
     "empty": "Nog geen cellen",
     "drag": "slepen",
     "explain": "Leg referenties uit",
+    "explainIntro": "Open een onderwerp om de bijhorende stap te markeren.",
     "remove": "Verwijder",
     "duplicateEdit": "Dupliceer en bewerk",
     "addMathCell": "Reken-cel toevoegen",
@@ -153,7 +154,14 @@
     "running": "Bezig…",
     "success": "Gelukt",
     "error": "Fout",
-    "idle": "Inactief"
+    "idle": "Inactief",
+    "stepsHeading": "Stap-voor-stap oplossing",
+    "stepsIntro": "Volg elke bewerking om te begrijpen hoe Axion de uitkomst opbouwt.",
+    "stepsUnavailable": "Voor dit resultaat zijn nog geen uitgeschreven stappen beschikbaar.",
+    "stepCountSingle": "1 stap",
+    "stepCountPlural": "{{count}} stappen",
+    "stepsBadge": "Stap {{index}}",
+    "stepsNavigate": "Markeer overeenkomende stap"
   },
   "theme": {
     "enable": "Neon actief",
