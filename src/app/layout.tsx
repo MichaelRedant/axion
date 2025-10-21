@@ -70,29 +70,15 @@ export default function RootLayout({
               <div className="flex flex-col gap-3 sm:items-end">
                 <nav aria-label="Informatief menu" className="sm:self-end">
                   <ul className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.35em] text-[var(--ax-muted)]">
-                    <li>
-                      <a className="axion-button axion-button--ghost px-4 py-2" href="#axion-main">
-                        Rekenmachine
-                      </a>
-                    </li>
-                    <li>
+                                        <li>
                       <a className="axion-button axion-button--ghost px-4 py-2" href="#axion-help">
                         Hulp
                       </a>
                     </li>
-                    <li>
-                      <a className="axion-button axion-button--ghost px-4 py-2" href="#axion-onboarding">
-                        Onboarding
-                      </a>
-                    </li>
+                    
                   </ul>
                 </nav>
-                <a
-                  href="#axion-onboarding"
-                  className="axion-button axion-button--primary px-6 py-2 text-xs uppercase tracking-[0.35em]"
-                >
-                  Start onboarding
-                </a>
+                
               </div>
             </div>
           </header>
