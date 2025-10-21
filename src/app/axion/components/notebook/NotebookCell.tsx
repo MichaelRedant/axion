@@ -266,7 +266,7 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
               selected={isSelected}
             />
             <section className="space-y-3">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
                   {t("notebook.outputHeading", "Output")}
                 </h3>
@@ -283,6 +283,18 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
                     />
                     {resultBadge.label}
                   </span>
+                ) : null}
+                {exactDecimal ? (
+                  <button
+                    type="button"
+                    className="axion-button axion-button--ghost text-[10px]"
+                    onClick={() => setShowExactAsDecimal((current) => !current)}
+                    aria-pressed={showExactAsDecimal}
+                  >
+                    {showExactAsDecimal
+                      ? t("common.showFraction", "Show fraction")
+                      : t("common.showDecimal", "Show decimal")}
+                  </button>
                 ) : null}
               </div>
               {cell.output?.type === "success" ? (
