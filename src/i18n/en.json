@@ -2,7 +2,9 @@
   "common": {
     "yes": "Yes",
     "no": "No",
-    "notAvailable": "Not available"
+    "notAvailable": "Not available",
+    "showDecimal": "Show decimal",
+    "showFraction": "Show fraction"
   },
   "hero": {
     "title": "AXION",
