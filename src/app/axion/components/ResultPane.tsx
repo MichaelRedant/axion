@@ -11,6 +11,7 @@ import type {
 import type { ProblemDescriptor } from "../lib/algebra/problems";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
+import { tryConvertLatexFractionToDecimal } from "../lib/utils/numbers";
 import { PlotPanel } from "./plots/PlotPanel";
 import "../styles.css";
 
@@ -29,10 +30,12 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     hasExplainContent(result) ? "explain" : "result",
   );
   const [hasUnreadFollowUps, setHasUnreadFollowUps] = useState(false);
+  const [showExactAsDecimal, setShowExactAsDecimal] = useState(false);
   const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
 
+  const exactLatex = result?.solution.exact ?? null;
   const exactHtml = useMemo(() => {
-    if (!result || !katex) {
+    if (!result || !katex || showExactAsDecimal) {
       return null;
     }
     try {
@@ -40,7 +43,14 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     } catch {
       return null;
     }
-  }, [result, katex]);
+  }, [result, katex, showExactAsDecimal]);
+
+  const exactDecimal = useMemo(() => {
+    if (!exactLatex) {
+      return null;
+    }
+    return tryConvertLatexFractionToDecimal(exactLatex);
+  }, [exactLatex]);
 
   const detailEntries = useMemo(() => {
     if (!result?.solution.details) return [] as Array<[string, unknown]>;
@@ -81,11 +91,17 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     if (!result) {
       setActiveTab("result");
       setHasUnreadFollowUps(false);
+      setShowExactAsDecimal(false);
       return;
     }
 
     setActiveTab(hasExplainContent(result) ? "explain" : "result");
+    setShowExactAsDecimal(false);
   }, [result]);
+
+  useEffect(() => {
+    setShowExactAsDecimal(false);
+  }, [exactLatex]);
 
   useEffect(() => {
     if (!result) {
@@ -207,9 +223,32 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
                 )}
               >
                 <div className="axion-metric-card">
-                  <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">{t("result.exact")}</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs uppercase tracking-[0.3em] text-[rgba(255,255,255,0.55)]">
+                      {t("result.exact")}
+                    </p>
+                    {exactDecimal ? (
+                      <button
+                        type="button"
+                        className="axion-button axion-button--ghost text-[0.6rem]"
+                        onClick={() => setShowExactAsDecimal((current) => !current)}
+                        aria-pressed={showExactAsDecimal}
+                      >
+                        {showExactAsDecimal
+                          ? t("common.showFraction", "Show fraction")
+                          : t("common.showDecimal", "Show decimal")}
+                      </button>
+                    ) : null}
+                  </div>
                   <div className="mt-2 min-h-[48px] text-lg" data-testid="result-exact">
-                    {exactHtml ? (
+                    {showExactAsDecimal && exactDecimal ? (
+                      <code
+                        className="font-mono text-base text-[var(--ax-text)]"
+                        data-testid="result-exact-decimal"
+                      >
+                        {exactDecimal}
+                      </code>
+                    ) : exactHtml ? (
                       <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
                     ) : (
                       <code className="font-mono text-sm text-[var(--ax-muted)]">{result.solution.exact}</code>
