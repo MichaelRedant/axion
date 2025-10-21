@@ -12,6 +12,7 @@ import type { ProblemDescriptor } from "../lib/algebra/problems";
 import type { KatexHandle } from "../lib/hooks/useKatex";
 import { useI18n } from "../lib/i18n/context";
 import { PlotPanel } from "./plots/PlotPanel";
+import { SolutionSteps, type SolutionStepsHandle } from "./notebook/SolutionSteps";
 import "../styles.css";
 
 type ResultTab = "result" | "steps" | "explain";
@@ -29,7 +30,7 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
     hasExplainContent(result) ? "explain" : "result",
   );
   const [hasUnreadFollowUps, setHasUnreadFollowUps] = useState(false);
-  const stepRefs = useRef<Map<string, HTMLDetailsElement>>(new Map());
+  const stepsRef = useRef<SolutionStepsHandle | null>(null);
 
   const exactHtml = useMemo(() => {
     if (!result || !katex) {
@@ -118,14 +119,10 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
       }
       setActiveTab("steps");
       requestAnimationFrame(() => {
-        const element = stepRefs.current.get(targetStepId);
-        if (element) {
-          element.open = true;
-          element.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+        stepsRef.current?.focusStep(targetStepId);
       });
     },
-    [setActiveTab],
+    [],
   );
 
   return (
@@ -298,40 +295,12 @@ export function ResultPane({ result, error, expression, katex }: ResultPaneProps
           ) : null}
 
           {activeTab === "steps" ? (
-            <div className="space-y-3">
-              {result.solution.steps.map((step, index) => {
-                const latex = step.latex && katex ? katex.renderToString(step.latex) : null;
-                return (
-                  <details
-                    key={step.id}
-                    ref={(element) => {
-                      if (!element) {
-                        stepRefs.current.delete(step.id);
-                        return;
-                      }
-                      stepRefs.current.set(step.id, element);
-                      if (!element.dataset.initialized) {
-                        element.open = index === 0;
-                        element.dataset.initialized = "true";
-                      }
-                    }}
-                    className="overflow-hidden rounded-lg border border-[rgba(0,255,242,0.15)] bg-black/40"
-                  >
-                    <summary className="flex cursor-pointer select-none items-center justify-between px-4 py-3">
-                      <span className="font-semibold text-sm text-neon">{step.title}</span>
-                      <span className="text-xs uppercase tracking-[0.25em] text-[var(--ax-muted)]">Step {index + 1}</span>
-                    </summary>
-                    <div className="border-t border-[rgba(0,255,242,0.15)] px-4 py-3">
-                      <p className="text-sm text-[rgba(255,255,255,0.75)]">{step.description}</p>
-                      {latex ? <div className="mt-2 text-base text-[var(--ax-text)]" dangerouslySetInnerHTML={{ __html: latex }} /> : null}
-                      {step.expression ? (
-                        <code className="mt-2 inline-block rounded bg-black/50 px-2 py-1 font-mono text-xs text-[var(--ax-muted)]">{step.expression}</code>
-                      ) : null}
-                    </div>
-                  </details>
-                );
-              })}
-            </div>
+            <SolutionSteps
+              ref={stepsRef}
+              steps={result.solution.steps}
+              katex={katex}
+              problemType={result.solution.type}
+            />
           ) : null}
 
           {activeTab === "explain" ? (

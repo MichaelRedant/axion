@@ -132,6 +132,7 @@
     "empty": "No cells yet",
     "drag": "drag",
     "explain": "Explain references",
+    "explainIntro": "Open a related topic to highlight the corresponding derivation step.",
     "remove": "Remove",
     "duplicateEdit": "Duplicate & edit",
     "addMathCell": "Add math cell",
@@ -153,7 +154,14 @@
     "running": "Evaluating…",
     "success": "Success",
     "error": "Error",
-    "idle": "Idle"
+    "idle": "Idle",
+    "stepsHeading": "Step-by-step solution",
+    "stepsIntro": "Follow each transformation to understand the solution.",
+    "stepsUnavailable": "No detailed steps are available for this result yet.",
+    "stepCountSingle": "1 step",
+    "stepCountPlural": "{{count}} steps",
+    "stepsBadge": "Step {{index}}",
+    "stepsNavigate": "Highlight matching step"
   },
   "theme": {
     "enable": "Neon enabled",
