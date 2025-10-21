@@ -1,5 +1,4 @@
 "use client";
-import clsx from "clsx";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from "react";
 import type { ProblemType } from "../../lib/algebra/problems";
 import type { SolutionStep } from "../../lib/algebra/solution";
@@ -14,7 +13,6 @@ interface SolutionStepsProps {
   readonly steps: readonly SolutionStep[];
   readonly katex: KatexHandle | null;
   readonly problemType?: ProblemType;
-  readonly className?: string;
 }
 
 const HIGHLIGHT_CLASSES = [
@@ -25,7 +23,7 @@ const HIGHLIGHT_CLASSES = [
 ];
 
 export const SolutionSteps = forwardRef<SolutionStepsHandle, SolutionStepsProps>(
-  ({ steps, katex, problemType, className }, ref) => {
+  ({ steps, katex, problemType }, ref) => {
     const { t } = useI18n();
     const stepRefs = useRef(new Map<string, HTMLDetailsElement>());
     const highlightTimeoutRef = useRef<number | null>(null);
@@ -105,12 +103,7 @@ export const SolutionSteps = forwardRef<SolutionStepsHandle, SolutionStepsProps>
 
     if (!hasSteps) {
       return (
-        <section
-          className={clsx(
-            "rounded-lg border border-[rgba(0,255,242,0.12)] bg-[rgba(8,12,20,0.6)] p-4",
-            className,
-          )}
-        >
+        <section className="rounded-lg border border-[rgba(0,255,242,0.12)] bg-[rgba(8,12,20,0.6)] p-4">
           <header className="space-y-1">
             <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
               {t("notebook.stepsHeading", "Step-by-step")}
@@ -122,12 +115,7 @@ export const SolutionSteps = forwardRef<SolutionStepsHandle, SolutionStepsProps>
     }
 
     return (
-      <section
-        className={clsx(
-          "space-y-3 rounded-lg border border-[rgba(0,255,242,0.15)] bg-[rgba(8,12,20,0.65)] p-4",
-          className,
-        )}
-      >
+      <section className="space-y-3 rounded-lg border border-[rgba(0,255,242,0.15)] bg-[rgba(8,12,20,0.65)] p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
             <h4 className="text-xs uppercase tracking-[0.3em] text-[var(--ax-muted)]">
