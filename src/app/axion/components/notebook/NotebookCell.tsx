@@ -4,9 +4,11 @@ import clsx from "clsx";
 import React, {
   forwardRef,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import type { KatexHandle } from "../../lib/hooks/useKatex";
 import { useI18n } from "../../lib/i18n/context";
@@ -19,6 +21,7 @@ import { TextCellEditor, type TextCellEditorHandle } from "./TextCellEditor";
 import { ExplainAccordion } from "../ExplainAccordion";
 import type { ExplainReference } from "../../lib/algebra/solution";
 import { SolutionSteps, type SolutionStepsHandle } from "./SolutionSteps";
+import { tryConvertLatexFractionToDecimal } from "../../lib/utils/numbers";
 
 export interface NotebookCellHandle {
   insert: (text: string, cursorOffset?: number) => void;
@@ -115,8 +118,14 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       }
     }, [cell.updatedAt, locale]);
 
+    const exactLatex =
+      cell.type === "math" && cell.output?.type === "success"
+        ? cell.output.evaluation.exact
+        : null;
+    const [showExactAsDecimal, setShowExactAsDecimal] = useState(false);
+
     const exactHtml = useMemo(() => {
-      if (cell.type !== "math" || !katex || cell.output?.type !== "success") {
+      if (cell.type !== "math" || !katex || cell.output?.type !== "success" || showExactAsDecimal) {
         return null;
       }
 
@@ -125,12 +134,20 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
       } catch {
         return null;
       }
-    }, [cell.output, cell.type, katex]);
+    }, [cell.output, cell.type, katex, showExactAsDecimal]);
 
-    const solution =
-      cell.type === "math" && cell.output?.type === "success"
-        ? cell.output.evaluation.solution
-        : null;
+    const exactDecimal = useMemo(() => {
+      if (!exactLatex) {
+        return null;
+      }
+      return tryConvertLatexFractionToDecimal(exactLatex);
+    }, [exactLatex]);
+
+    useEffect(() => {
+      setShowExactAsDecimal(false);
+    }, [exactLatex]);
+
+    const solution = cell.type === "math" && cell.output?.type === "success" ? cell.output.evaluation.solution : null;
 
     const followUps = solution?.followUps ?? [];
     const steps = solution?.steps ?? [];
@@ -271,13 +288,36 @@ export const NotebookCell = forwardRef<Ref, NotebookCellProps>(
               {cell.output?.type === "success" ? (
                 <div className="space-y-4" data-testid={`notebook-output-${cell.id}`}>
                   <div className="space-y-2 text-base">
-                    {exactHtml ? (
-                      <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
-                    ) : (
-                      <code className="font-mono text-sm text-[var(--ax-muted)]">
-                        {cell.output.evaluation.exact}
-                      </code>
-                    )}
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-h-[32px] flex-1">
+                        {showExactAsDecimal && exactDecimal ? (
+                          <code
+                            className="font-mono text-base text-[var(--ax-text)]"
+                            data-testid={`notebook-exact-decimal-${cell.id}`}
+                          >
+                            {exactDecimal}
+                          </code>
+                        ) : exactHtml ? (
+                          <span dangerouslySetInnerHTML={{ __html: exactHtml }} />
+                        ) : (
+                          <code className="font-mono text-sm text-[var(--ax-muted)]">
+                            {cell.output.evaluation.exact}
+                          </code>
+                        )}
+                      </div>
+                      {exactDecimal ? (
+                        <button
+                          type="button"
+                          className="axion-button axion-button--ghost text-[11px]"
+                          onClick={() => setShowExactAsDecimal((current) => !current)}
+                          aria-pressed={showExactAsDecimal}
+                        >
+                          {showExactAsDecimal
+                            ? t("common.showFraction", "Show fraction")
+                            : t("common.showDecimal", "Show decimal")}
+                        </button>
+                      ) : null}
+                    </div>
                     {cell.output.evaluation.approx ? (
                       <p className="font-mono text-xs text-amber-200">
                         ~= {cell.output.evaluation.approx}

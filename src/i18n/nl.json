@@ -2,7 +2,9 @@
   "common": {
     "yes": "Ja",
     "no": "Nee",
-    "notAvailable": "Niet beschikbaar"
+    "notAvailable": "Niet beschikbaar",
+    "showDecimal": "Toon als getal",
+    "showFraction": "Toon als breuk"
   },
   "hero": {
     "title": "AXION",
