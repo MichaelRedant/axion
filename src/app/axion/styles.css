@@ -155,6 +155,22 @@
     @apply border-[rgba(0,255,242,0.25)] text-[rgba(168,218,255,0.9)];
   }
 
+  .axion-segmented-control {
+    @apply inline-flex items-center gap-1 rounded-full border border-[rgba(0,255,242,0.2)] bg-[rgba(7,13,22,0.9)] p-0.5 shadow-[0_0_12px_rgba(0,255,242,0.08)];
+  }
+
+  .axion-segmented-control__button {
+    @apply relative rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[rgba(255,255,255,0.65)] transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neon;
+  }
+
+  .axion-segmented-control__button:hover {
+    @apply text-[var(--ax-text)];
+  }
+
+  .axion-segmented-control__button--active {
+    @apply bg-[rgba(0,255,242,0.15)] text-[var(--ax-text)] shadow-[0_0_12px_rgba(0,255,242,0.35)];
+  }
+
   .axion-keypad-group {
     @apply relative overflow-hidden rounded-xl border border-[rgba(0,255,242,0.12)] bg-[rgba(10,15,24,0.9)] transition;
     box-shadow: inset 0 0 25px rgba(0, 255, 242, 0.05);
